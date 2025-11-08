@@ -1,22 +1,80 @@
 openapi: 3.0.0
 info:
-  title: Sample API
-  description: Sample API for demonstrating OpenAPI documentation.
-  version: 1.0.0
+  title: File Sharing API
+  description: API cho dịch vụ chia sẻ file.
+  version: 1.0.0-rc.1
 
 paths:
-  /ping:
+  /api/v1/users/me:
     get:
-      summary: Returns a pong message
+      summary: Lấy thông tin người dùng hiện tại
+      description: |
+        Trả về thông tin của người dùng đang thực hiện request.
+        Middleware sẽ tự động tạo người dùng mới nếu chưa tồn tại dựa trên header.
+      tags:
+        - Users
+      parameters:
+        - $ref: "#/components/parameters/TelegramUserId"
+        - $ref: "#/components/parameters/TelegramUsername"
       responses:
-        '200':
-          description: A successful response
+        "200":
+          description: Thành công. Trả về thông tin người dùng.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: pong
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Bad Request - Header bị thiếu hoặc không hợp lệ.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
+components:
+  parameters:
+    TelegramUserId:
+      name: X-Telegram-User-Id
+      in: header
+      required: true
+      description: ID người dùng từ Telegram.
+      schema:
+        type: integer
+        format: int64
+    TelegramUsername:
+      name: X-Telegram-Username
+      in: header
+      required: true
+      description: Username người dùng từ Telegram.
+      schema:
+        type: string
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID nội bộ của user.
+        telegram_user_id:
+          type: integer
+          format: int64
+          description: ID từ Telegram.
+        username:
+          type: string
+          description: Username từ Telegram.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      properties:
+        message:
+          type: string

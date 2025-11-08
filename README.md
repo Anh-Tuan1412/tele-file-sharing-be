@@ -1,6 +1,4 @@
-# Project Name
-
-Giới thiệu, thành viên, hướng dẫn nhanh
+# Telegram file sharing
 
 ## Hướng dẫn chạy dự án (Local Development)
 

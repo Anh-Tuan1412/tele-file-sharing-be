@@ -1,0 +1,22 @@
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Sample API for demonstrating OpenAPI documentation.
+  version: 1.0.0
+
+paths:
+  /ping:
+    get:
+      summary: Returns a pong message
+      responses:
+        '200':
+          description: A successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: pong
+

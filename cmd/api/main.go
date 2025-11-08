@@ -8,6 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -45,6 +47,10 @@ func main() {
 			authed.GET("/me", userHandler.GetCurrentUser)
 		}
 	}
+
+	// ---- Swagger UI ----
+	router.StaticFile("/openapi.yaml", "./api/openapi.yaml")
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/openapi.yaml")))
 
 	// ---- 6. Khởi động HTTP Server ----
 	log.Printf("Starting server on %s", config.HTTPServerAddress)

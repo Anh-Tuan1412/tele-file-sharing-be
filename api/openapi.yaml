@@ -5,7 +5,7 @@ info:
   version: 1.0.0-rc.1
 
 paths:
-  /api/v1/users/me:
+  /api/me:
     get:
       summary: Lấy thông tin người dùng hiện tại
       description: |
@@ -60,7 +60,7 @@ components:
         id:
           type: integer
           description: ID nội bộ của user.
-        telegram_user_id:
+        telegram_id:
           type: integer
           format: int64
           description: ID từ Telegram.
@@ -76,5 +76,5 @@ components:
     Error:
       type: object
       properties:
-        message:
+        error:
           type: string

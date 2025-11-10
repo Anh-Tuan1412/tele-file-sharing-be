@@ -1,10 +1,11 @@
 package main
 
 import (
-	"log"
-	"file-sharing/internal/transport/http"
-	"file-sharing/internal/storage"
 	"file-sharing/internal/config"
+	"file-sharing/internal/storage"
+	"file-sharing/internal/transport/http"
+	"log"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -13,7 +14,7 @@ import (
 )
 
 func main() {
-    // ---- 1. Khởi tạo Database Connection ----
+	// ---- 1. Khởi tạo Database Connection ----
 	config, err := config.LoadConfig("./env")
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
@@ -27,9 +28,8 @@ func main() {
 	defer db.Close()
 	log.Println("Connected to database")
 
-    // ---- 2. Khởi tạo UserRepository ----
+	// ---- 2. Khởi tạo UserRepository ----
 	userRepo := storage.NewUserRepository(db)
-
 
 	// ---- 3. Khởi tạo Gin Router ----
 	router := gin.Default()
@@ -37,6 +37,7 @@ func main() {
 	// ---- 4. Khởi tạo Handlers & Middlewares ----
 	userHandler := http.NewUserHandler()
 	authMiddleware := http.AuthMiddleware(userRepo)
+	fileHandler := http.InitFileUploadHandler(db.DB)
 
 	// ---- 5. Đăng ký API Routes ----
 	api := router.Group("/api")
@@ -45,6 +46,7 @@ func main() {
 		authed.Use(authMiddleware)
 		{
 			authed.GET("/me", userHandler.GetCurrentUser)
+			authed.POST("/v1/files", fileHandler)
 		}
 	}
 
@@ -58,4 +60,3 @@ func main() {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
-

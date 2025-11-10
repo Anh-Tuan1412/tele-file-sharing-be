@@ -35,6 +35,67 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /v1/files:
+    post:
+      summary: Khởi tạo upload, trả URL hoặc nhận file
+      description: |
+        Cho phép người dùng khởi tạo upload file.  
+        Backend sẽ:
+        - Xác thực người dùng dựa trên Telegram headers.  
+        - Tạo bản ghi `files` trong DB (trạng thái `pending`).  
+        - Tạo URL upload (presigned URL) hoặc chấp nhận file trực tiếp.  
+        - Trả về `file_id`, `object_key`, và `upload_url` (nếu có).
+      tags:
+        - Files
+      parameters:
+        - $ref: "#/components/parameters/TelegramUserId"
+        - $ref: "#/components/parameters/TelegramUsername"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - filename
+                - size
+              properties:
+                filename:
+                  type: string
+                  example: "photo.jpg"
+                size:
+                  type: integer
+                  example: 204800
+                mime_type:
+                  type: string
+                  example: "image/jpeg"
+                created_at:
+                  type: string
+                  formant: date-time
+                  example: "2025-11-09T14:00:00Z"
+                updated_at:
+                  type: string
+                  format: date-time
+                  example: "2025-11-09T14:00:00Z"
+      responses:
+        "200":
+          description: Thành công – trả về thông tin upload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileInitResponse"
+        "400":
+          description: Thiếu hoặc sai dữ liệu đầu vào
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Lỗi hệ thống
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
 components:
   parameters:
@@ -54,6 +115,29 @@ components:
       schema:
         type: string
   schemas:
+    FileInitResponse:
+      type: object
+      properties:
+        file_id:
+          type: integer
+          example: 101
+        object_key:
+          type: string
+          example: "uploads/2025/11/09/photo_abc123.jpg"
+        upload_url:
+          type: string
+          example: "https://minio.example.com/presigned/abc123"
+        status:
+          type: string
+          example: "pending"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-11-09T14:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-11-09T14:00:00Z"
     User:
       type: object
       properties:

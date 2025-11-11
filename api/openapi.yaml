@@ -96,6 +96,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    get:
+      summary: Liệt kê file của người dùng hiện tại
+      description: |
+        Trả về danh sách file thuộc sở hữu của người dùng đang thực hiện request.
+        Người dùng được xác định thông qua Telegram headers.
+      tags:
+        - Files
+      parameters:
+        - $ref: "#/components/parameters/TelegramUserId"
+        - $ref: "#/components/parameters/TelegramUsername"
+      responses:
+        "200":
+          description: Thành công - Trả về danh sách file.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/File"
+        "400":
+          description: Bad Request - Thiếu hoặc sai header.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
 components:
   parameters:
@@ -138,6 +169,36 @@ components:
           type: string
           format: date-time
           example: "2025-11-09T14:00:00Z"
+    File:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 101
+        object_key:
+          type: string
+          example: "uploads/2025/11/09/photo_abc123.jpg"
+        filename:
+          type: string
+          example: "photo.jpg"
+        size:
+          type: integer
+          example: 204800
+        mime:
+          type: string
+          example: "image/jpeg"
+        status:
+          type: string
+          example: "pending"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-11-09T14:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-11-09T14:00:00Z"
+
     User:
       type: object
       properties:

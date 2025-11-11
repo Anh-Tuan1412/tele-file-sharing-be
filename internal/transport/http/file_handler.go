@@ -102,3 +102,77 @@ func InitFileUploadHandler(db *sql.DB) gin.HandlerFunc {
 		c.JSON(http.StatusOK, resp)
 	}
 }
+
+type FileResponse struct {
+	ID        int64     `json:"id"`
+	ObjectKey string    `json:"object_key"`
+	Filename  string    `json:"filename"`
+	Size      int64     `json:"size"`
+	Mime      string    `json:"mime"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// GET /v1/files - Liệt kê file của người dùng hiện tại
+func ListUserFilesHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		telegramID := c.GetHeader("X-Telegram-User-Id")
+		username := c.GetHeader("X-Telegram-Username")
+
+		if telegramID == "" || username == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "missing Telegram headers"})
+			return
+		}
+
+		query := `
+			SELECT
+				f.id,
+				f.object_key,
+				f.filename,
+				f.size,
+				f.mime,
+				f.status,
+				f.created_at,
+				f.updated_at
+			FROM files f
+			JOIN users u ON u.id = f.owner_user_id
+			WHERE u.telegram_user_id = $1
+			ORDER BY f.created_at DESC
+		`
+
+		rows, err := db.Query(query, telegramID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+			return
+		}
+		defer rows.Close()
+
+		files := []FileResponse{}
+		for rows.Next() {
+			var file FileResponse
+			err := rows.Scan(
+				&file.ID,
+				&file.ObjectKey,
+				&file.Filename,
+				&file.Size,
+				&file.Mime,
+				&file.Status,
+				&file.CreatedAt,
+				&file.UpdatedAt,
+			)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to scan file"})
+				return
+			}
+			files = append(files, file)
+		}
+
+		if err = rows.Err(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, files)
+	}
+}

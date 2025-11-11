@@ -38,6 +38,7 @@ func main() {
 	userHandler := http.NewUserHandler()
 	authMiddleware := http.AuthMiddleware(userRepo)
 	fileHandler := http.InitFileUploadHandler(db.DB)
+	listFilesHandler := http.ListUserFilesHandler(db.DB)
 
 	// ---- 5. Đăng ký API Routes ----
 	api := router.Group("/api")
@@ -47,6 +48,7 @@ func main() {
 		{
 			authed.GET("/me", userHandler.GetCurrentUser)
 			authed.POST("/v1/files", fileHandler)
+			authed.GET("/v1/files", listFilesHandler)
 		}
 	}
 

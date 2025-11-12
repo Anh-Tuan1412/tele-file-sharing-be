@@ -128,6 +128,323 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /v1/files/{file_id}/report-complete:
+    post:
+      summary: Báo cáo hoàn tất upload file
+      description: |
+        Cho phép người dùng gửi báo cáo về việc hoàn tất upload file.
+        Backend sẽ:
+        - Xác thực người dùng dựa trên Telegram headers.
+        - Kiểm tra quyền sở hữu file.
+        - Tạo bản ghi báo cáo (upload_reports).
+        - Cập nhật trạng thái file (completed/failed).
+        - Trả về thông tin báo cáo vừa tạo.
+      tags:
+        - Files
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          description: ID của file cần báo cáo
+          schema:
+            type: integer
+            format: int64
+        - $ref: "#/components/parameters/TelegramUserId"
+        - $ref: "#/components/parameters/TelegramUsername"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportUploadCompleteRequest"
+      responses:
+        "201":
+          description: Thành công – báo cáo được tạo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportUploadCompleteResponse"
+        "400":
+          description: Thiếu hoặc sai dữ liệu đầu vào
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: File không tồn tại hoặc không có quyền truy cập
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Lỗi hệ thống
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/files/{file_id}/report:
+    get:
+      summary: Lấy báo cáo upload hoàn tất mới nhất
+      description: |
+        Trả về báo cáo upload hoàn tất mới nhất cho file được chỉ định.
+        Người dùng chỉ có thể xem báo cáo của file mình sở hữu.
+      tags:
+        - Files
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          description: ID của file
+          schema:
+            type: integer
+            format: int64
+        - $ref: "#/components/parameters/TelegramUserId"
+        - $ref: "#/components/parameters/TelegramUsername"
+      responses:
+        "200":
+          description: Thành công – trả về báo cáo upload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadReport"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Báo cáo không tồn tại hoặc không có quyền truy cập
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/upload-reports:
+    get:
+      summary: Liệt kê tất cả báo cáo upload của người dùng
+      description: |
+        Trả về danh sách tất cả báo cáo upload của người dùng hiện tại,
+        được sắp xếp theo thời gian gần nhất trước.
+        Hỗ trợ phân trang.
+      tags:
+        - Files
+      parameters:
+        - $ref: "#/components/parameters/TelegramUserId"
+        - $ref: "#/components/parameters/TelegramUsername"
+        - name: limit
+          in: query
+          description: Số lượng báo cáo tối đa trả về (mặc định 20, tối đa 100)
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: offset
+          in: query
+          description: Vị trí bắt đầu (mặc định 0)
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Thành công – danh sách báo cáo
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UploadReport"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  parameters:
+    TelegramUserId:
+      name: X-Telegram-User-Id
+      in: header
+      required: true
+      description: ID người dùng từ Telegram.
+      schema:
+        type: integer
+        format: int64
+    TelegramUsername:
+      name: X-Telegram-Username
+      in: header
+      required: true
+      description: Username người dùng từ Telegram.
+      schema:
+        type: string
+  schemas:
+    ReportUploadCompleteRequest:
+      type: object
+      required:
+        - status
+        - report_type
+      properties:
+        status:
+          type: string
+          enum: [completed, failed]
+          description: Trạng thái upload (completed hoặc failed)
+          example: "completed"
+        report_type:
+          type: string
+          enum: [success, error, warning]
+          description: Loại báo cáo
+          example: "success"
+        message:
+          type: string
+          description: Thông điệp mô tả
+          example: "Upload completed successfully"
+        error_code:
+          type: string
+          description: Mã lỗi (nếu có)
+          example: "FILE_TOO_LARGE"
+        error_message:
+          type: string
+          description: Chi tiết lỗi
+          example: "File size exceeds limit"
+        file_checksum:
+          type: string
+          description: Checksum của file (MD5/SHA256)
+          example: "a1b2c3d4e5f6"
+        file_size_actual:
+          type: integer
+          format: int64
+          description: Kích thước thực tế của file (bytes)
+          example: 204800
+        upload_duration_ms:
+          type: integer
+          description: Thời gian upload (milliseconds)
+          example: 5000
+        bandwidth_kbps:
+          type: number
+          format: double
+          description: Tốc độ upload (Kbps)
+          example: 512.5
+
+    ReportUploadCompleteResponse:
+      type: object
+      properties:
+        report_id:
+          type: integer
+          format: int64
+          description: ID báo cáo vừa tạo
+          example: 1
+        file_id:
+          type: integer
+          format: int64
+          description: ID file
+          example: 101
+        status:
+          type: string
+          description: Trạng thái báo cáo
+          example: "completed"
+        report_type:
+          type: string
+          description: Loại báo cáo
+          example: "success"
+        message:
+          type: string
+          description: Thông điệp
+          example: "Upload completed successfully"
+        reported_at:
+          type: string
+          format: date-time
+          description: Thời gian báo cáo
+          example: "2025-11-12T10:30:00Z"
+
+    UploadReport:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: ID báo cáo
+          example: 1
+        file_id:
+          type: integer
+          format: int64
+          description: ID file
+          example: 101
+        owner_user_id:
+          type: integer
+          format: int64
+          description: ID chủ sở hữu file
+          example: 1
+        status:
+          type: string
+          enum: [pending, completed, failed, processing]
+          description: Trạng thái báo cáo
+          example: "completed"
+        report_type:
+          type: string
+          enum: [success, error, warning]
+          description: Loại báo cáo
+          example: "success"
+        message:
+          type: string
+          description: Thông điệp mô tả
+          example: "Upload completed successfully"
+        error_code:
+          type: string
+          description: Mã lỗi
+          example: "FILE_TOO_LARGE"
+        error_message:
+          type: string
+          description: Chi tiết lỗi
+          example: "File size exceeds limit"
+        file_checksum:
+          type: string
+          description: Checksum của file
+          example: "a1b2c3d4e5f6"
+        file_size_actual:
+          type: integer
+          format: int64
+          description: Kích thước file (bytes)
+          example: 204800
+        upload_duration_ms:
+          type: integer
+          description: Thời gian upload (milliseconds)
+          example: 5000
+        bandwidth_kbps:
+          type: number
+          format: double
+          description: Tốc độ upload (Kbps)
+          example: 512.5
+        reported_at:
+          type: string
+          format: date-time
+          description: Thời gian báo cáo
+          example: "2025-11-12T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Thời gian cập nhật lần cuối
+          example: "2025-11-12T10:30:00Z"
+
 components:
   parameters:
     TelegramUserId:

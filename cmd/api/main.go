@@ -39,6 +39,11 @@ func main() {
 	authMiddleware := http.AuthMiddleware(userRepo)
 	fileHandler := http.InitFileUploadHandler(db.DB)
 	listFilesHandler := http.ListUserFilesHandler(db.DB)
+    
+    // Report handlers (register these so client endpoints exist)
+    reportCompleteHandler := http.ReportUploadCompleteHandler(db.DB)
+    getReportHandler := http.GetUploadReportHandler(db.DB)
+    listReportsHandler := http.ListUploadReportsHandler(db.DB)
 
 	// ---- 5. Đăng ký API Routes ----
 	api := router.Group("/api")
@@ -49,6 +54,10 @@ func main() {
 			authed.GET("/me", userHandler.GetCurrentUser)
 			authed.POST("/v1/files", fileHandler)
 			authed.GET("/v1/files", listFilesHandler)
+            // report endpoints
+            authed.POST("/v1/files/:file_id/report-complete", reportCompleteHandler)
+            authed.GET("/v1/files/:file_id/report", getReportHandler)
+            authed.GET("/v1/upload-reports", listReportsHandler)
 		}
 	}
 

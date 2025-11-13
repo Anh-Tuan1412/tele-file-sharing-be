@@ -280,7 +280,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /v1/shares/{id}/revoke:
+  /api/v1/shares/{id}/revoke:
     post:
       summary: Thu hồi link chia sẻ
       description: Đánh dấu một link chia sẻ là đã thu hồi.

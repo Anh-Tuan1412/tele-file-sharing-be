@@ -280,6 +280,41 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /api/v1/shares/{id}/revoke:
+    post:
+      summary: Thu hồi link chia sẻ
+      description: Đánh dấu một link chia sẻ là đã thu hồi.
+      tags:
+        - Shares
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: "#/components/parameters/TelegramUserId"
+        - $ref: "#/components/parameters/TelegramUsername"
+      responses:
+        "200":
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShareRevokeResponse"  # <--- Đã sửa dòng này
+        "400":
+          description: Lỗi dữ liệu đầu vào
+          content:
+             application/json:
+               schema:
+                 $ref: "#/components/schemas/Error"
+        "404":
+          description: Không tìm thấy hoặc không có quyền
+          content:
+             application/json:
+               schema:
+                 $ref: "#/components/schemas/Error"
+
 components:
   parameters:
     TelegramUserId:
@@ -298,6 +333,62 @@ components:
       schema:
         type: string
   schemas:
+    File:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 101
+        object_key:
+          type: string
+          example: "uploads/2025/11/09/photo_abc123.jpg"
+        filename:
+          type: string
+          example: "photo.jpg"
+        size:
+          type: integer
+          example: 204800
+        mime:
+          type: string
+          example: "image/jpeg"
+        status:
+          type: string
+          example: "pending"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-11-09T14:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-11-09T14:00:00Z"
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID nội bộ của user.
+        telegram_id:
+          type: integer
+          format: int64
+          description: ID từ Telegram.
+        username:
+          type: string
+          description: Username từ Telegram.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
     ReportUploadCompleteRequest:
       type: object
       required:
@@ -444,25 +535,7 @@ components:
           format: date-time
           description: Thời gian cập nhật lần cuối
           example: "2025-11-12T10:30:00Z"
-
-components:
-  parameters:
-    TelegramUserId:
-      name: X-Telegram-User-Id
-      in: header
-      required: true
-      description: ID người dùng từ Telegram.
-      schema:
-        type: integer
-        format: int64
-    TelegramUsername:
-      name: X-Telegram-Username
-      in: header
-      required: true
-      description: Username người dùng từ Telegram.
-      schema:
-        type: string
-  schemas:
+  
     FileInitResponse:
       type: object
       properties:
@@ -486,57 +559,54 @@ components:
           type: string
           format: date-time
           example: "2025-11-09T14:00:00Z"
-    File:
+    
+    Share:
       type: object
+      description: Thông tin về liên kết chia sẻ.
       properties:
         id:
-          type: integer
-          example: 101
-        object_key:
-          type: string
-          example: "uploads/2025/11/09/photo_abc123.jpg"
-        filename:
-          type: string
-          example: "photo.jpg"
-        size:
-          type: integer
-          example: 204800
-        mime:
-          type: string
-          example: "image/jpeg"
-        status:
-          type: string
-          example: "pending"
-        created_at:
-          type: string
-          format: date-time
-          example: "2025-11-09T14:00:00Z"
-        updated_at:
-          type: string
-          format: date-time
-          example: "2025-11-09T14:00:00Z"
-
-    User:
-      type: object
-      properties:
-        id:
-          type: integer
-          description: ID nội bộ của user.
-        telegram_id:
           type: integer
           format: int64
-          description: ID từ Telegram.
-        username:
+          example: 1
+        file_id:
+          type: integer
+          format: int64
+          example: 101
+        owner_user_id:
+          type: integer
+          format: int64
+          example: 5
+        hash:
           type: string
-          description: Username từ Telegram.
+          description: Chuỗi định danh duy nhất của link share.
+          example: "a1b2c3d4"
+        revoked:
+          type: boolean
+          description: Trạng thái thu hồi (true là đã thu hồi).
+          example: false
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Thời gian hết hạn link (null là vĩnh viễn).
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
-    Error:
+
+    ShareRevokeResponse:
       type: object
+      description: Phản hồi khi thu hồi share thành công.
       properties:
-        error:
+        message:
           type: string
+          example: "Share revoked successfully"
+        share_id:
+          type: integer
+          format: int64
+          example: 1
+        status:
+          type: string
+          example: "revoked"

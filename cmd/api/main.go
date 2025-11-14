@@ -4,6 +4,7 @@ import (
 	"file-sharing/internal/config"
 	"file-sharing/internal/storage"
 	"file-sharing/internal/transport/http"
+	"file-sharing/internal/share"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -28,17 +29,22 @@ func main() {
 	defer db.Close()
 	log.Println("Connected to database")
 
-	// ---- 2. Khởi tạo UserRepository ----
+	// ---- 2. Khởi tạo Repository ----
 	userRepo := storage.NewUserRepository(db)
+	shareRepo := storage.NewShareRepository(db)
 
 	// ---- 3. Khởi tạo Gin Router ----
 	router := gin.Default()
+
+	// ---- Khởi tạo Service ----
+    shareService := share.NewShareService(shareRepo)
 
 	// ---- 4. Khởi tạo Handlers & Middlewares ----
 	userHandler := http.NewUserHandler()
 	authMiddleware := http.AuthMiddleware(userRepo)
 	fileHandler := http.InitFileUploadHandler(db.DB)
 	listFilesHandler := http.ListUserFilesHandler(db.DB)
+	shareHandler := http.NewShareHandler(shareService)
     
     // Report handlers (register these so client endpoints exist)
     reportCompleteHandler := http.ReportUploadCompleteHandler(db.DB)
@@ -58,6 +64,7 @@ func main() {
             authed.POST("/v1/files/:file_id/report-complete", reportCompleteHandler)
             authed.GET("/v1/files/:file_id/report", getReportHandler)
             authed.GET("/v1/upload-reports", listReportsHandler)
+			authed.POST("/v1/shares/:id/revoke", shareHandler.HandleRevoke)
 		}
 	}
 

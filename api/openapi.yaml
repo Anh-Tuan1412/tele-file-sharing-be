@@ -347,7 +347,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ShareRevokeResponse"  # <--- Đã sửa dòng này
+                $ref: "#/components/schemas/ShareRevokeResponse"
         "400":
           description: Lỗi dữ liệu đầu vào
           content:
@@ -626,6 +626,14 @@ components:
           type: string
           description: Chuỗi định danh duy nhất của link share.
           example: "a1b2c3d4"
+        require_password:
+          type: boolean
+          description: Yêu cầu mật khẩu để tải file.
+          example: true
+        hash_password:
+          type: string
+          description: Mật khẩu đã được hash (sẽ không trả về cho client).
+          example: "$2a$10$..."
         revoked:
           type: boolean
           description: Trạng thái thu hồi (true là đã thu hồi).
@@ -651,6 +659,11 @@ components:
           format: int64
           description: ID của file cần chia sẻ.
           example: 101
+        password:
+          type: string
+          format: password
+          description: Mật khẩu tùy chọn cho link share.
+          example: "my-secret-pass-123"
         expires_at:
           type: string
           format: date-time

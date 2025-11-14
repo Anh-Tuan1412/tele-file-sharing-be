@@ -57,3 +57,14 @@ func (r *postgresShareRepository) GetShareByID(ctx context.Context, shareID int6
     err := r.db.GetContext(ctx, &share, query, shareID)
     return &share, err
 }
+
+//Các hàm truy xuất DB liên quan đến authorize password 
+func (r *postgresShareRepository) GetPasswordHash(ctx context.Context, shareID int64) (string, error) {
+	const query = `SELECT passwordHash FROM shares WHERE id = $1`
+	var passwordHash string
+	err := r.db.GetContext(ctx, &passwordHash, query, shareID)
+	if err != nil {
+		return "", err
+	}
+	return passwordHash, nil
+}

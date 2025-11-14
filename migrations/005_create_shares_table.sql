@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS shares (
     id SERIAL PRIMARY KEY,
     file_id INT NOT NULL REFERENCES files(id) ON DELETE CASCADE,
-    owner_user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    owner_user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE, -- Khóa ngoại tới id trong bảng users gốc 
     hash VARCHAR(255) NOT NULL UNIQUE, -- Dùng để tạo link chia sẻ public
     revoked BOOLEAN NOT NULL DEFAULT FALSE,
     expires_at TIMESTAMPTZ, -- Thời gian hết hạn (nếu có)

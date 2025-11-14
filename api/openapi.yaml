@@ -254,7 +254,7 @@ paths:
             default: 0
       responses:
         "200":
-          description: Thành công – danh sách báo cáo
+          description: Thành công danh sách báo cáo
           content:
             application/json:
               schema:
@@ -279,6 +279,52 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+
+  /v1/shares:
+    post:
+      summary: Tạo 1 chia sẻ mới cho file 
+      description: 
+        Tạo một link chia sẻ mới cho một file.
+        Người dùng phải là chủ sở hữu của file.
+        Backend sẽ tự động tạo một 'hash' duy nhất cho link.
+      tags: 
+        - Shares
+        paramethers:
+        - $ref: "#/components/parameters/TelegramUserId"
+        - $ref: "#/components/parameters/TelegramUsername"
+        requestBody:
+          required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateShareRequest"
+
+        responses:
+        "201":
+          description: Tạo chia sẻ thành công. Trả về thông tin share.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Share"
+        "400":
+          description: Bad Request - Thiếu file_id hoặc dữ liệu không hợp lệ.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: File không tồn tại hoặc không có quyền.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
 
   /api/v1/shares/{id}/revoke:
     post:
@@ -595,7 +641,23 @@ components:
         updated_at:
           type: string
           format: date-time
-
+    CreateShareRequest:
+      type: object
+      required:
+        - file_id
+      properties:
+        file_id:
+          type: integer
+          format: int64
+          description: ID của file cần chia sẻ.
+          example: 101
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Thời gian hết hạn (null hoặc bỏ qua là vĩnh viễn).
+          example: "2025-12-31T23:59:59Z"
+          
     ShareRevokeResponse:
       type: object
       description: Phản hồi khi thu hồi share thành công.

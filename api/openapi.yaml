@@ -580,6 +580,14 @@ components:
           type: string
           description: Chuỗi định danh duy nhất của link share.
           example: "a1b2c3d4"
+        require_password:
+          type: boolean
+          description: Yêu cầu mật khẩu để tải file.
+          example: true
+        hash_password:
+          type: string
+          description: Mật khẩu đã được hash (sẽ không trả về cho client).
+          example: "$2a$10$..."
         revoked:
           type: boolean
           description: Trạng thái thu hồi (true là đã thu hồi).

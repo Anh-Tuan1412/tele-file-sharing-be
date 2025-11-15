@@ -30,7 +30,7 @@ func (r *postgresShareRepository) RevokeShare(ctx context.Context, shareID int64
 	const query = `
 		UPDATE shares
 		SET revoked = true, updated_at = NOW()
-		WHERE id = $1 AND owner_user_id = $2
+		WHERE id = $1 AND owner_user_id = $2 
 	`
 
 	result, err := r.db.ExecContext(ctx, query, shareID, ownerUserID)

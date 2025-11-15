@@ -1,5 +1,17 @@
 version: '3.8'
 
 services:
-  # Dịch vụ của bạn ở đây
+  postgres:
+    image: postgres:16-alpine
+    container_name: file_sharing_db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=file-sharing
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
+volumes:
+  postgres_data:

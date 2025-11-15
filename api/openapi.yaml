@@ -685,3 +685,50 @@ components:
         status:
           type: string
           example: "revoked"
+  /v1/shares/:id/authorize:
+    post:
+      summary: Xác thực mật khẩu cho link chia sẻ
+      description: |
+        Cho phép người dùng xác thực mật khẩu để truy cập link chia sẻ được bảo vệ.
+        Nếu mật khẩu đúng, hệ thống sẽ trả về token truy cập tạm thời.
+      tags:
+        - Authorization
+      parameters:
+        - name: id
+          in: URL
+          required: true
+          description: ID của link chia sẻ
+          schema:
+            type: integer
+            format: int64
+        - name: password
+          in: URL
+          required: true
+          description: Mật khẩu để xác thực
+          schema:
+            type: string                   
+      responses:
+        "200":
+          description: Thành công – trả về token truy cập tạm thời
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: Token truy cập tạm thời
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        "400":
+          description: Dữ liệu đầu vào không hợp lệ hoặc mật khẩu sai
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Lỗi hệ thống
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+                

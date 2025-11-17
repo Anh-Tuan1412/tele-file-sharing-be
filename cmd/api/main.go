@@ -12,6 +12,8 @@ import (
 	_ "github.com/lib/pq"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"os"
+	"strings"
 )
 
 func main() {
@@ -31,7 +33,24 @@ func main() {
 
 	// ---- 2. Khởi tạo Repository ----
 	userRepo := storage.NewUserRepository(db)
-	shareRepo := storage.NewShareRepository(db)
+
+	// Tạo MinIO client repo
+	minioEndpoint := os.Getenv("MINIO_ENDPOINT")
+	minioBucket := os.Getenv("MINIO_BUCKET")
+	var minioRepo *storage.MinioRepo
+	if minioEndpoint != "" && minioBucket != "" {
+		minioAccess := os.Getenv("MINIO_ACCESS_KEY")
+		minioSecret := os.Getenv("MINIO_SECRET_KEY")
+		useSSL := strings.ToLower(os.Getenv("MINIO_USE_SSL")) == "true"
+		mr, err := storage.NewMinioRepo(minioEndpoint, minioAccess, minioSecret, minioBucket, useSSL)
+		if err != nil {
+			log.Printf("failed to init minio repo: %v", err)
+		} else {
+			minioRepo = mr
+		}
+	}
+
+	shareRepo := storage.NewShareRepository(db, minioRepo)
 
 	// ---- 3. Khởi tạo Gin Router ----
 	router := gin.Default()
@@ -74,6 +93,7 @@ func main() {
 			authed.POST("/v1/shares/:id/authorize", authorizePasswordHandler.HandleAuthorizePassword)
 
 			authed.GET("/v1/shares", shareHandler.HandleListShares)
+			authed.GET("/v1/shares/:id/download", shareHandler.HandleDownload)
 		}
 	}
 

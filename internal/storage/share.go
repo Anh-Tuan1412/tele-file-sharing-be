@@ -16,6 +16,8 @@ type ShareRepository interface {
 	
     // GetShareByID lấy thông tin share (nếu cần dùng sau này)
     GetShareByID(ctx context.Context, shareID int64) (*model.Share, error)
+	// Lấy hash mật khẩu của share
+	GetPasswordHash(ctx context.Context, shareID int64) (string, error)
 }
 
 type postgresShareRepository struct {

@@ -3,6 +3,18 @@
 ### 1. Giới thiệu
 
 ### 2. Danh sách Command của Bot
+## 2. Danh sách Command của Bot
+
+Các command chính mà người dùng có thể sử dụng để tương tác với Bot, cùng với mô tả chức năng của chúng.
+
+| Command | Mô tả | API Backend liên quan |
+| :--- | :--- | :--- |
+| **`/start`** | Bắt đầu phiên làm việc, xác thực người dùng với hệ thống. | `POST v1/api/me` |
+| **`/upload`** | Kích hoạt luồng tải file mới lên. | `POST /v1/files` |
+| **`/myfiles`** | Liệt kê tất cả các file mà người dùng đã tải lên. | `GET /v1/files` |
+| **`/share`** | Bắt đầu luồng tạo link chia sẻ cho một file đã có. | `POST /v1/shares` |
+| **`/myshares`** | Liệt kê các link chia sẻ mà người dùng đã tạo. | `GET /v1/shares` |
+| **`/revoke`** | Bắt đầu luồng thu hồi (vô hiệu hóa) một link chia sẻ. | `POST /v1/shares/:id/revoke` |
 
 ### 3. Mock Conversation Flow
 

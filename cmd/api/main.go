@@ -74,6 +74,9 @@ func main() {
 			authed.POST("/v1/shares/:id/authorize", authorizePasswordHandler.HandleAuthorizePassword)
 
 			authed.GET("/v1/shares", shareHandler.HandleListShares)
+
+			// get metadata 
+    		authed.GET("/v1/shares/:id", shareHandler.HandleGetShareMetadata)
 		}
 	}
 

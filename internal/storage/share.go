@@ -16,8 +16,12 @@ type ShareRepository interface {
 	
     // GetShareByID lấy thông tin share (nếu cần dùng sau này)
     GetShareByID(ctx context.Context, shareID int64) (*model.Share, error)
+	
+
+	ListSharesByOwnerUserID(ctx context.Context, ownerUserID int64, limit, offset int) ([]model.Share, error)
+
 	// Lấy hash mật khẩu của share
-	GetPasswordHash(ctx context.Context, shareID int64) (string, error)
+  GetPasswordHash(ctx context.Context, shareID int64) (string, error)
 }
 
 type postgresShareRepository struct {
@@ -32,7 +36,7 @@ func (r *postgresShareRepository) RevokeShare(ctx context.Context, shareID int64
 	const query = `
 		UPDATE shares
 		SET revoked = true, updated_at = NOW()
-		WHERE id = $1 AND owner_user_id = $2
+		WHERE id = $1 AND owner_user_id = $2 
 	`
 
 	result, err := r.db.ExecContext(ctx, query, shareID, ownerUserID)
@@ -69,4 +73,33 @@ func (r *postgresShareRepository) GetPasswordHash(ctx context.Context, shareID i
 		return "", err
 	}
 	return passwordHash, nil
+}
+
+
+// ListSharesByOwnerUserID retrieves all shares for a user with pagination
+func (r *postgresShareRepository) ListSharesByOwnerUserID(ctx context.Context, ownerUserID int64, limit, offset int) ([]model.Share, error) {
+	const query = `
+		SELECT
+			id,
+			file_id,
+			owner_user_id,
+			hash,
+			require_password,
+			revoked,
+			expires_at,
+			created_at,
+			updated_at
+		FROM shares
+		WHERE owner_user_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+	var shares []model.Share
+	err := r.db.SelectContext(ctx, &shares, query, ownerUserID, limit, offset)
+	if err != nil {
+		log.Printf("Failed to list shares for user ID %d: %v", ownerUserID, err)
+		return nil, err
+	}
+
+	return shares, nil
 }

@@ -159,7 +159,7 @@ paths:
               $ref: "#/components/schemas/ReportUploadCompleteRequest"
       responses:
         "201":
-          description: Thành công – báo cáo được tạo
+          description: Thành công báo cáo được tạo
           content:
             application/json:
               schema:
@@ -254,7 +254,7 @@ paths:
             default: 0
       responses:
         "200":
-          description: Thành công – danh sách báo cáo
+          description: Thành công danh sách báo cáo
           content:
             application/json:
               schema:
@@ -275,6 +275,96 @@ paths:
                 $ref: "#/components/schemas/Error"
         "500":
           description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/shares:
+    get:
+      summary: Liệt kê các chia sẻ của người gửi
+      description: |
+        Trả về danh sách tất cả các link chia sẻ mà người dùng hiện tại đã tạo.
+        Hỗ trợ phân trang để hiển thị kết quả.
+        Shares được sắp xếp theo thời gian tạo (mới nhất trước).
+      tags:
+        - Shares
+      parameters:
+        - $ref: "#/components/parameters/TelegramUserId"
+        - $ref: "#/components/parameters/TelegramUsername"
+        - name: limit
+          in: query
+          description: Số lượng shares tối đa trả về (mặc định 20, tối đa 100)
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: offset
+          in: query
+          description: Vị trí bắt đầu (mặc định 0)
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Thành công – danh sách shares
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Share"
+        "401":
+          description: Unauthorized – Thiếu hoặc sai authentication token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      summary: Tạo 1 chia sẻ mới cho file
+      description: Tạo một link chia sẻ mới cho một file.
+        Người dùng phải là chủ sở hữu của file.
+        Backend sẽ tự động tạo một 'hash' duy nhất cho link.
+      tags:
+        - Shares
+      paramethers:
+        - $ref: "#/components/parameters/TelegramUserId"
+        - $ref: "#/components/parameters/TelegramUsername"
+      requestBody:
+        required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CreateShareRequest"
+
+      responses:
+        "201":
+          description: Tạo chia sẻ thành công. Trả về thông tin share.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Share"
+        "400":
+          description: Bad Request - Thiếu file_id hoặc dữ liệu không hợp lệ.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: File không tồn tại hoặc không có quyền.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error.
           content:
             application/json:
               schema:
@@ -301,19 +391,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ShareRevokeResponse"  # <--- Đã sửa dòng này
+                $ref: "#/components/schemas/ShareRevokeResponse"
         "400":
           description: Lỗi dữ liệu đầu vào
           content:
-             application/json:
-               schema:
-                 $ref: "#/components/schemas/Error"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: Không tìm thấy hoặc không có quyền
           content:
-             application/json:
-               schema:
-                 $ref: "#/components/schemas/Error"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
 components:
   parameters:
@@ -382,7 +472,7 @@ components:
         updated_at:
           type: string
           format: date-time
-    
+
     Error:
       type: object
       properties:
@@ -535,7 +625,7 @@ components:
           format: date-time
           description: Thời gian cập nhật lần cuối
           example: "2025-11-12T10:30:00Z"
-  
+
     FileInitResponse:
       type: object
       properties:
@@ -559,7 +649,7 @@ components:
           type: string
           format: date-time
           example: "2025-11-09T14:00:00Z"
-    
+
     Share:
       type: object
       description: Thông tin về liên kết chia sẻ.
@@ -603,6 +693,27 @@ components:
         updated_at:
           type: string
           format: date-time
+    CreateShareRequest:
+      type: object
+      required:
+        - file_id
+      properties:
+        file_id:
+          type: integer
+          format: int64
+          description: ID của file cần chia sẻ.
+          example: 101
+        password:
+          type: string
+          format: password
+          description: Mật khẩu tùy chọn cho link share.
+          example: "my-secret-pass-123"
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Thời gian hết hạn (null hoặc bỏ qua là vĩnh viễn).
+          example: "2025-12-31T23:59:59Z"
 
     ShareRevokeResponse:
       type: object
@@ -639,7 +750,7 @@ components:
           required: true
           description: Mật khẩu để xác thực
           schema:
-            type: string                   
+            type: string
       responses:
         "200":
           description: Thành công – trả về token truy cập tạm thời
@@ -664,4 +775,3 @@ components:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-                

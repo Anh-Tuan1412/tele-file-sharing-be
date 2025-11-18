@@ -94,6 +94,9 @@ func main() {
 
 			authed.GET("/v1/shares", shareHandler.HandleListShares)
 			authed.GET("/v1/shares/:id/download", shareHandler.HandleDownload)
+
+			// get metadata 
+    		authed.GET("/v1/shares/:id", shareHandler.HandleGetShareMetadata)
 		}
 	}
 

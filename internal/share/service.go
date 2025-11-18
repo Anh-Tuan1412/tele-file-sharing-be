@@ -16,7 +16,9 @@ type Service interface {
 	ListShares(ctx context.Context, userID int64, limit, offset int) ([]model.Share, error)
 
 	// Tạo presigned URL cho download
-    CreatePresignedURL(ctx context.Context, shareID int64, requesterUserID int64, expirySeconds int) (string, error)
+  CreatePresignedURL(ctx context.Context, shareID int64, requesterUserID int64, expirySeconds int) (string, error)
+  
+	GetMetadata(ctx context.Context, id int64) (*model.ShareMetadataResponseDTO, error)
 }
 
 type shareService struct {
@@ -112,3 +114,31 @@ var (
 	// trả khi đã đạt max_downloads
     ErrMaxDownloadsExceeded = errors.New("max downloads exceeded")
 )
+
+func (s *shareService) GetMetadata(ctx context.Context, id int64) (*model.ShareMetadataResponseDTO, error) {
+	md, err := s.repo.GetShareMetadata(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.ShareMetadataResponseDTO{
+		ID:        md.Share.ID,
+		Hash:      md.Share.Hash,
+		Revoked:   md.Share.Revoked,
+		ExpiresAt: md.Share.ExpiresAt,
+		CreatedAt: md.Share.CreatedAt,
+		File: model.FileMetadataDTO{
+			ID:        md.File.ID,
+			Filename:  md.File.Filename,
+			ObjectKey: md.File.ObjectKey,
+			Size:      md.File.Size,
+			Mime:      md.File.Mime,
+			Status:    md.File.Status,
+		},
+		Owner: model.UserMinimalDTO{
+			ID:         md.User.ID,
+			Username:   md.User.Username,
+			TelegramID: md.User.TelegramID,
+		},
+	}, nil
+}

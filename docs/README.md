@@ -250,6 +250,271 @@ Bot:
 ##### 3.8. Flow người nhận tải file
 
 (Luồng GET /v1/shares/:id → authorize → download)
+1. Mục tiêu của flow
+
+Cho phép người nhận (recipient) tải xuống file được chia sẻ qua link.
+Bot thực hiện:
+
+Lấy metadata của share link
+
+Kiểm tra yêu cầu truy cập (hết hạn, thu hồi, password, TOTP, whitelist user)
+
+Nếu đạt điều kiện → gọi API BE để lấy presigned URL
+
+Gửi link tải xuống cho người nhận
+
+2. Điều kiện kích hoạt (Trigger)
+
+User: Nhấn vào link được chia sẻ → Bot nhận deep-link dạng:
+
+/start dl_SHARETOKEN
+
+
+Bot FE trích ra SHARE_TOKEN và gọi API BE tương ứng:
+
+GET /v1/shares/:id
+
+POST /v1/shares/:id/verify-password (nếu cần)
+
+POST /v1/shares/:id/verify-totp (nếu cần)
+
+GET /v1/shares/:id/download
+
+3. Các actor liên quan
+
+User (Recipient – người nhận file)
+
+Bot Telegram (FE – xử lý UI + gọi API)
+
+Backend API
+
+Object Storage (MinIO/S3)
+
+4. Conversation Flow (Chi tiết)
+4.1. Bước 1 – User nhấn vào link chia sẻ
+
+User:
+(Nhấn vào link: https://domain.com/dl/abcd1234
+ → Telegram mở bot với payload)
+
+/start dl_abcd1234
+
+
+Bot:
+(Trích xuất token = "abcd1234")
+
+4.2. Bước 2 – Bot gọi API kiểm tra share
+
+API gọi (FE → BE):
+
+Endpoint:
+
+GET /v1/shares/abcd1234
+
+
+Headers:
+
+X-Telegram-ID: 987654321
+X-Telegram-Username: user_b
+
+
+Backend xử lý (Logic):
+
+Tìm share theo share_token.
+
+Kiểm tra:
+
+file có tồn tại không
+
+link có hết hạn không
+
+link có bị revoke không
+
+user nhận có nằm trong whitelist không (nếu có)
+
+có cần password / TOTP hay không
+
+Backend trả về (ví dụ link hợp lệ – không password – không TOTP):
+
+{
+  "data": {
+    "share_id": "abcd1234",
+    "file_name": "document.pdf",
+    "file_size": 1340023,
+    "expires_in": 7200,
+    "password_required": false,
+    "totp_required": false
+  }
+}
+
+
+Bot gửi User:
+
+ document.pdf (1.34 MB)
+ Link còn hiệu lực trong 2 giờ.
+
+Bạn muốn tải xuống chứ?
+ Chọn Tải xuống.
+
+4.3. Bước 3 – Người dùng nhấn “Tải xuống”
+
+User:
+(Bấm button “Tải xuống”)
+
+API gọi (FE → BE):
+
+GET /v1/shares/abcd1234/download
+
+
+Backend xử lý:
+
+Ghi audit log “USER_DOWNLOADED_FILE”
+
+Tạo presigned URL từ S3/MinIO
+
+Backend trả về:
+
+{
+  "download_url": "https://s3-presigned-url..."
+}
+
+
+Bot phản hồi User:
+
+ File sẵn sàng!
+ Đây là link tải của bạn:
+https://s3-presigned-url
+...
+
+Nhánh bổ sung theo rule (nếu có)
+4.4. Nếu share yêu cầu PASSWORD
+
+Backend (Step 2) trả:
+
+{
+  "password_required": true
+}
+
+
+Bot:
+
+ File này được bảo vệ bằng mật khẩu.
+Vui lòng nhập mật khẩu.
+
+User:
+
+mypassword
+
+
+Bot → API:
+
+POST /v1/shares/abcd1234/verify-password
+{
+  "password": "mypassword"
+}
+
+
+Nếu đúng:
+
+{ "status": "ok" }
+
+
+Bot:
+
+ Mật khẩu chính xác.
+Bấm Tải xuống để nhận file.
+
+4.5. Nếu share yêu cầu TOTP
+
+Backend trả:
+
+{
+  "totp_required": true
+}
+
+
+Bot:
+
+ File yêu cầu mã xác thực 2 lớp (TOTP).
+Vui lòng nhập mã 6 số.
+
+User:
+
+123456
+
+
+Bot → API:
+
+POST /v1/shares/abcd1234/verify-totp
+{
+  "code": "123456"
+}
+
+
+Nếu đúng:
+
+{ "status": "ok" }
+
+
+Bot:
+
+ Xác thực thành công.
+Bấm Tải xuống để nhận file.
+
+4.6. Nếu share hết hạn
+
+Backend trả:
+
+{ "error": "LINK_EXPIRED" }
+
+
+Bot:
+
+ Link đã hết hạn.
+Vui lòng yêu cầu người gửi tạo link mới.
+
+4.7. Nếu share bị thu hồi
+
+Backend trả:
+
+{ "error": "LINK_REVOKED" }
+
+
+Bot:
+
+ Link này đã bị thu hồi bởi người gửi.
+
+4.8. Nếu user không nằm trong danh sách allowed recipients
+
+Backend trả:
+
+{ "error": "USER_NOT_ALLOWED" }
+
+
+Bot:
+
+ Bạn không có quyền tải file này.
+
+4.9. Nếu file đã bị xóa
+
+Backend trả:
+
+{ "error": "FILE_NOT_FOUND" }
+
+
+Bot:
+
+ File không còn tồn tại trong hệ thống.
+
+5. Error Handling
+Tình huống|	Bot phản hồi|	Backend trả về
+| :--- | :--- | :--- |
+Sai password|	“ Mật khẩu không đúng.”|	INVALID_PASSWORD
+Sai TOTP|	“ Mã xác thực không hợp lệ.”|	INVALID_TOTP
+Link hết hạn|	“ Link đã hết hạn.”|	LINK_EXPIRED
+Không được phép|	“ Bạn không có quyền.”|	USER_NOT_ALLOWED
+File bị xóa|	“File không tồn tại.”|	FILE_NOT_FOUND
+Lỗi hệ thống|	“Hệ thống đang bận, thử lại sau.”|	INTERNAL_ERROR
 
 ### 4. State Diagram cho Bot
 

@@ -106,7 +106,114 @@ Khởi tạo phiên làm việc cho người dùng.
 
 ##### 3.4. Flow /myfiles
 
-(Luồng FE gọi GET /v1/files)
+###### 1\. Mục tiêu của flow
+
+Hiển thị danh sách tất cả các file mà người dùng đã upload lên hệ thống, giúp người dùng dễ dàng quản lý và tạo link chia sẻ cho các file của mình.
+
+###### 2\. Điều kiện kích hoạt (Trigger)
+
+  * **Bot lệnh:** `/myfiles`
+  * **Backend liên quan:** `GET /api/v1/files`
+
+###### 3\. Các actor liên quan
+
+  * User (Sender)
+  * Bot Telegram (FE)
+  * Backend API
+
+###### 4\. Conversation Flow (Hội thoại chi tiết)
+
+**4.1. Bước 1 – User gửi command**
+
+**User:**
+`/myfiles`
+
+**Bot:**
+```
+⏳ Đang tải danh sách file của bạn...
+```
+
+**4.2. Bước 2 – Bot gọi API**
+
+**API gọi:**
+```http
+GET /api/v1/files
+Headers:
+  X-Telegram-User-Id: 123456789
+  X-Telegram-Username: nguyen_van_a
+```
+
+**Backend trả về (Response 200 OK - Có files):**
+
+```json
+[
+  {
+    "id": 101,
+    "object_key": "uploads/5/1731312000_document.pdf",
+    "filename": "document.pdf",
+    "size": 2621440,
+    "mime": "application/pdf",
+    "status": "completed",
+    "created_at": "2025-11-20T10:30:00Z",
+    "updated_at": "2025-11-20T10:30:00Z"
+  },
+  {
+    "id": 102,
+    "object_key": "uploads/5/1731311100_image.jpg",
+    "filename": "image.jpg",
+    "size": 1258291,
+    "mime": "image/jpeg",
+    "status": "completed",
+    "created_at": "2025-11-20T09:15:00Z",
+    "updated_at": "2025-11-20T09:15:00Z"
+  },
+  {
+    "id": 103,
+    "object_key": "uploads/5/1731225900_presentation.pptx",
+    "filename": "presentation.pptx",
+    "size": 6082560,
+    "mime": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "status": "completed",
+    "created_at": "2025-11-19T16:45:00Z",
+    "updated_at": "2025-11-19T16:45:00Z"
+  }
+]
+```
+
+**4.3. Bước 3 – Bot hiển thị danh sách**
+
+**Bot:**
+
+```
+📁 Danh sách file của bạn:
+
+1️⃣ document.pdf
+   📊 Size: 2.5 MB
+   📅 Upload: 20/11/2025 10:30
+   🔗 /share_101
+
+2️⃣ image.jpg
+   📊 Size: 1.2 MB
+   📅 Upload: 20/11/2025 09:15
+   🔗 /share_102
+
+3️⃣ presentation.pptx
+   📊 Size: 5.8 MB
+   📅 Upload: 19/11/2025 16:45
+   🔗 /share_103
+
+💡 Gõ /share_<số> để tạo link chia sẻ
+📝 Tổng: 3 files (9.5 MB)
+```
+
+###### 5\. Error Handling
+
+| Tình huống | Bot phản hồi | Backend trả về |
+| :--- | :--- | :--- |
+| **Thiếu thông tin định danh** | "❌ Lỗi: Không xác định được người dùng. Vui lòng gõ /start để đăng nhập." | **400 Bad Request**<br>`{ "error": "missing Telegram headers" }` |
+| **User chưa tồn tại** | "❌ Tài khoản chưa được khởi tạo. Vui lòng gõ /start trước." | **401 Unauthorized**<br>`{ "error": "user not found" }` |
+| **Lỗi Database** | "❌ Hệ thống đang gặp sự cố. Vui lòng thử lại sau." | **500 Internal Server Error**<br>`{ "error": "database error" }` |
+| **Timeout kết nối** | "❌ Không thể kết nối đến server. Vui lòng kiểm tra mạng và thử lại." | **503 Service Unavailable**<br>`{ "error": "connection timeout" }` |
 
 ##### 3.5. Flow /share
 

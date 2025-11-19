@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -88,4 +89,75 @@ func (h *ShareHandler) HandleListShares(c *gin.Context) {
 
 	// 4. Trả về kết quả
 	c.JSON(http.StatusOK, shares)
+}
+
+// GET /v1/shares/:id/download
+func (h *ShareHandler) HandleDownload(c *gin.Context) {
+    // auth + parse id
+    user, ok := GetUserFromContext(c)
+    if !ok {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+        return
+    }
+    idStr := c.Param("id")
+    shareID, err := strconv.ParseInt(idStr, 10, 64)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "invalid share id"})
+        return
+    }
+
+    // tạo presigned url qua service (service sẽ Verify & CheckAndIncrement)
+    const expirySec = 120
+    url, err := h.service.CreatePresignedURL(c.Request.Context(), shareID, user.ID, expirySec)
+    if err != nil {
+        if errors.Is(err, share.ErrShareNotFoundOrAccessDenied) {
+            c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+            return
+        }
+        if errors.Is(err, share.ErrMaxDownloadsExceeded) {
+            c.JSON(http.StatusTooManyRequests, gin.H{"error": "download limit reached"})
+            return
+        }
+        if errors.Is(err, share.ErrShareRevokedOrExpired) {
+            c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+            return
+        }
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create presigned url"})
+        return
+    }
+
+    // Return link
+    c.JSON(http.StatusOK, gin.H{
+        "url":        url,
+        "expires_in": expirySec,
+    })
+}
+
+// GET /v1/shares/:id
+func (h *ShareHandler) HandleGetShareMetadata(c *gin.Context) {
+    // 1. Lấy User từ context (AuthMiddleware đã nạp vào)
+    _, exists := GetUserFromContext(c)
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    // 2. Lấy share ID từ URL
+    idStr := c.Param("id")
+    shareID, err := strconv.ParseInt(idStr, 10, 64)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid share ID"})
+        return
+    }
+
+    // 3. Gọi Service để lấy metadata
+    data, err := h.service.GetMetadata(c.Request.Context(), shareID)
+    if err != nil {
+        // Nếu lỗi là share không tồn tại
+        c.JSON(http.StatusNotFound, gin.H{"error": "Share not found"})
+        return
+    }
+
+    // 4. Trả về JSON
+    c.JSON(http.StatusOK, data)
 }

@@ -405,6 +405,63 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /v1/shares/{id}/download:
+    get:
+      summary: Tải file từ link chia sẻ
+      description: |
+        Xác minh share (không bị revoked, chưa hết hạn và đã authorize nếu yêu cầu mật khẩu),
+        sau đó trả file nhị phân cho client (Content-Disposition sẽ là attachment).
+      tags:
+        - Shares
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID của share
+          schema:
+            type: integer
+            format: int64
+        - $ref: "#/components/parameters/TelegramUserId"
+        - $ref: "#/components/parameters/TelegramUsername"
+      responses:
+        "200":
+          description: File được trả về dưới dạng binary (tham số Content-Type dựa trên file)
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Bad Request - share ID không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized - thiếu hoặc sai Telegram headers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - share đã bị revoke hoặc hết hạn, hoặc chưa được authorize
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not Found - không tìm thấy share hoặc file trên disk
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
 components:
   parameters:
     TelegramUserId:
@@ -775,3 +832,55 @@ components:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /v1/shares/{id}:
+    get:
+      summary: Lấy metadata của share
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Metadata của share
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShareMetadataResponse"
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not found
+
+components:
+  schemas:
+    FileMetadata:
+      type: object
+      properties:
+        id: { type: integer }
+        filename: { type: string }
+        object_key: { type: string }
+        size: { type: integer }
+        mime: { type: string }
+        status: { type: string }
+
+    UserMinimal:
+      type: object
+      properties:
+        id: { type: integer }
+        username: { type: string }
+        telegram_user_id: { type: integer }
+
+    ShareMetadataResponse:
+      type: object
+      properties:
+        id: { type: integer }
+        hash: { type: string }
+        revoked: { type: boolean }
+        expires_at: { type: string, nullable: true }
+        created_at: { type: string }
+        file: { $ref: "#/components/schemas/FileMetadata" }
+        owner: { $ref: "#/components/schemas/UserMinimal" }
+
+

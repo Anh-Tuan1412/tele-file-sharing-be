@@ -6,55 +6,56 @@
 
 Các command chính mà người dùng có thể sử dụng để tương tác với Bot, cùng với mô tả chức năng của chúng.
 
-| Command | Mô tả | API Backend liên quan |
-| :--- | :--- | :--- |
-| **`/start`** | Bắt đầu phiên làm việc, xác thực người dùng với hệ thống. | `POST v1/api/me` |
-| **`/upload`** | Kích hoạt luồng tải file mới lên. | `POST /v1/files` |
-| **`/myfiles`** | Liệt kê tất cả các file mà người dùng đã tải lên. | `GET /v1/files` |
-| **`/share`** | Bắt đầu luồng tạo link chia sẻ cho một file đã có. | `POST /v1/shares` |
-| **`/myshares`** | Liệt kê các link chia sẻ mà người dùng đã tạo. | `GET /v1/shares` |
-| **`/revoke`** | Bắt đầu luồng thu hồi (vô hiệu hóa) một link chia sẻ. | `POST /v1/shares/:id/revoke` |
+| Command         | Mô tả                                                     | API Backend liên quan        |
+| :-------------- | :-------------------------------------------------------- | :--------------------------- |
+| **`/start`**    | Bắt đầu phiên làm việc, xác thực người dùng với hệ thống. | `POST v1/api/me`             |
+| **`/upload`**   | Kích hoạt luồng tải file mới lên.                         | `POST /v1/files`             |
+| **`/myfiles`**  | Liệt kê tất cả các file mà người dùng đã tải lên.         | `GET /v1/files`              |
+| **`/share`**    | Bắt đầu luồng tạo link chia sẻ cho một file đã có.        | `POST /v1/shares`            |
+| **`/myshares`** | Liệt kê các link chia sẻ mà người dùng đã tạo.            | `GET /v1/shares`             |
+| **`/revoke`**   | Bắt đầu luồng thu hồi (vô hiệu hóa) một link chia sẻ.     | `POST /v1/shares/:id/revoke` |
 
 ## 3. Mock Conversation Flow
 
 #### 3.1. Flow /start
 
-
 ##### 1\. Mục tiêu của flow
 
 Khởi tạo phiên làm việc cho người dùng.
 
-  * **Logic:** Backend kiểm tra thông tin từ Telegram. Nếu user chưa tồn tại trong bảng `users`, hệ thống tự động tạo mới (Auto-register). Nếu đã tồn tại, trả về thông tin hiện có.
+- **Logic:** Backend kiểm tra thông tin từ Telegram. Nếu user chưa tồn tại trong bảng `users`, hệ thống tự động tạo mới (Auto-register). Nếu đã tồn tại, trả về thông tin hiện có.
 
 ##### 2\. Điều kiện kích hoạt (Trigger)
 
-  * **User:** Gõ lệnh `/start`
-  * **Backend Endpoint:** `GET /v1/me`
+- **User:** Gõ lệnh `/start`
+- **Backend Endpoint:** `GET /v1/me`
 
 ##### 3\. Các actor liên quan
 
-  * User (Sender)
-  * Bot Telegram (FE Logic)
-  * Backend API
+- User (Sender)
+- Bot Telegram (FE Logic)
+- Backend API
 
 ##### 4\. Conversation Flow (Chi tiết)
 
 ###### 4.1. Bước 1 – User bắt đầu
+
 **User:**
 `/start`
 
 **Bot:**
-*(Bot nhận event, trích xuất `telegram_id` và `username` từ message của người dùng)*
+_(Bot nhận event, trích xuất `telegram_id` và `username` từ message của người dùng)_
 
 ###### 4.2. Bước 2 – Bot gọi API (Get or Create User)
+
 **API gọi (FE -\> BE):**
 
-  * **Endpoint:** `GET /v1/me`
-  * **Headers** (Dùng để định danh user):
-    ```http
-    X-Telegram-ID: 123456789
-    X-Telegram-Username: nguyen_van_a
-    ```
+- **Endpoint:** `GET /v1/me`
+- **Headers** (Dùng để định danh user):
+  ```http
+  X-Telegram-ID: 123456789
+  X-Telegram-Username: nguyen_van_a
+  ```
 
 **Backend xử lý (Logic):**
 
@@ -75,11 +76,11 @@ Khởi tạo phiên làm việc cho người dùng.
 }
 ```
 
-###### 4.3. Bước 3 – Bot phản hồi User**
+###### 4.3. Bước 3 – Bot phản hồi User\*\*
 
 **Bot:**
 
-> Xin chào **nguyen\_van\_a**\! 👋
+> Xin chào **nguyen_van_a**\! 👋
 > Tài khoản của bạn đã sẵn sàng.
 >
 > Bạn có thể:
@@ -88,12 +89,10 @@ Khởi tạo phiên làm việc cho người dùng.
 
 ##### 5\. Error Handling
 
-| Tình huống | Bot phản hồi | Backend trả về |
-| :--- | :--- | :--- |
-| **Thiếu thông tin định danh** (Header rỗng) | "Lỗi hệ thống: Không xác định được người dùng." | **400 Bad Request**<br>`{ "error": "MISSING_TELEGRAM_INFO" }` |
-| **Lỗi Database** (Connect/Insert fail) | "Hệ thống đang bận. Vui lòng thử lại sau." | **500 Internal Server Error**<br>`{ "error": "INTERNAL_ERROR" }` |
-
-
+| Tình huống                                  | Bot phản hồi                                    | Backend trả về                                                   |
+| :------------------------------------------ | :---------------------------------------------- | :--------------------------------------------------------------- |
+| **Thiếu thông tin định danh** (Header rỗng) | "Lỗi hệ thống: Không xác định được người dùng." | **400 Bad Request**<br>`{ "error": "MISSING_TELEGRAM_INFO" }`    |
+| **Lỗi Database** (Connect/Insert fail)      | "Hệ thống đang bận. Vui lòng thử lại sau."      | **500 Internal Server Error**<br>`{ "error": "INTERNAL_ERROR" }` |
 
 #### 3.2. Flow /upload
 
@@ -111,14 +110,14 @@ Hiển thị danh sách tất cả các file mà người dùng đã upload lên
 
 ##### 2\. Điều kiện kích hoạt (Trigger)
 
-  * **Bot lệnh:** `/myfiles`
-  * **Backend liên quan:** `GET /api/v1/files`
+- **Bot lệnh:** `/myfiles`
+- **Backend liên quan:** `GET /api/v1/files`
 
 ##### 3\. Các actor liên quan
 
-  * User (Sender)
-  * Bot Telegram (FE)
-  * Backend API
+- User (Sender)
+- Bot Telegram (FE)
+- Backend API
 
 ##### 4\. Conversation Flow (Hội thoại chi tiết)
 
@@ -128,6 +127,7 @@ Hiển thị danh sách tất cả các file mà người dùng đã upload lên
 `/myfiles`
 
 **Bot:**
+
 ```
 ⏳ Đang tải danh sách file của bạn...
 ```
@@ -135,6 +135,7 @@ Hiển thị danh sách tất cả các file mà người dùng đã upload lên
 ###### 4.2. Bước 2 – Bot gọi API
 
 **API gọi:**
+
 ```http
 GET /api/v1/files
 Headers:
@@ -207,12 +208,12 @@ Headers:
 
 ##### 5\. Error Handling
 
-| Tình huống | Bot phản hồi | Backend trả về |
-| :--- | :--- | :--- |
-| **Thiếu thông tin định danh** | "❌ Lỗi: Không xác định được người dùng. Vui lòng gõ /start để đăng nhập." | **400 Bad Request**<br>`{ "error": "missing Telegram headers" }` |
-| **User chưa tồn tại** | "❌ Tài khoản chưa được khởi tạo. Vui lòng gõ /start trước." | **401 Unauthorized**<br>`{ "error": "user not found" }` |
-| **Lỗi Database** | "❌ Hệ thống đang gặp sự cố. Vui lòng thử lại sau." | **500 Internal Server Error**<br>`{ "error": "database error" }` |
-| **Timeout kết nối** | "❌ Không thể kết nối đến server. Vui lòng kiểm tra mạng và thử lại." | **503 Service Unavailable**<br>`{ "error": "connection timeout" }` |
+| Tình huống                    | Bot phản hồi                                                               | Backend trả về                                                     |
+| :---------------------------- | :------------------------------------------------------------------------- | :----------------------------------------------------------------- |
+| **Thiếu thông tin định danh** | "❌ Lỗi: Không xác định được người dùng. Vui lòng gõ /start để đăng nhập." | **400 Bad Request**<br>`{ "error": "missing Telegram headers" }`   |
+| **User chưa tồn tại**         | "❌ Tài khoản chưa được khởi tạo. Vui lòng gõ /start trước."               | **401 Unauthorized**<br>`{ "error": "user not found" }`            |
+| **Lỗi Database**              | "❌ Hệ thống đang gặp sự cố. Vui lòng thử lại sau."                        | **500 Internal Server Error**<br>`{ "error": "database error" }`   |
+| **Timeout kết nối**           | "❌ Không thể kết nối đến server. Vui lòng kiểm tra mạng và thử lại."      | **503 Service Unavailable**<br>`{ "error": "connection timeout" }` |
 
 #### 3.5. Flow /share
 
@@ -228,11 +229,11 @@ Cho phép người dùng tạo một chia sẻ cho một file mà mình đã upl
 
 ###### 3\. Các actor liên quan:
 
-* User(Sender)
+- User(Sender)
 
-* Bot Telegram
+- Bot Telegram
 
-* Backend API 
+- Backend API
 
 ###### 4\. Conservation flow
 
@@ -264,15 +265,15 @@ Cho phép người dùng tạo một chia sẻ cho một file mà mình đã upl
 
 **Bot:**
 
->Bạn có muốn đặt mật khẩu không? Nhập "Có"/"Không"
+> Bạn có muốn đặt mật khẩu không? Nhập "Có"/"Không"
 
-**4.4 Bước 4 - User đồng ý** 
+**4.4 Bước 4 - User đồng ý**
 
 **User:**
 
 `Nhập "Có"`
 
-**Bot:** 
+**Bot:**
 
 > Hãy nhập mật khẩu mà bạn muốn
 
@@ -284,7 +285,7 @@ Cho phép người dùng tạo một chia sẻ cho một file mà mình đã upl
 
 **Bot:**
 
-> Hãy nhập username Telegram của những người được phép tải file 
+> Hãy nhập username Telegram của những người được phép tải file
 
 **4.6 Bước 6 - User nhập thông tin**
 
@@ -336,49 +337,50 @@ Cho phép người dùng tạo một chia sẻ cho một file mà mình đã upl
 
 ###### 5.\ Error Handling:
 
-|Tình huống|Bot phản hồi|Backend trả|
-|:---|:---|:---|
-|**Dữ liệu không hợp lệ**|"Dữ liệu không hợp lệ. Vui lòng kiểm tra và nhập lại"|400 BAD REQUEST<br>`{"error: INVALID_INPUT"}`|
-|**Lỗi hệ thống(máy chủ không truy cập được database hệ thống, backend gặp lỗi,...)**|"Máy chủ xảy ra vấn đề. Vui lòng quay lại sau"|500 INTERNAL SERVER ERROR<br>`{"error: INTERNAL_ERROR"}`|
-
-
+| Tình huống                                                                           | Bot phản hồi                                          | Backend trả                                              |
+| :----------------------------------------------------------------------------------- | :---------------------------------------------------- | :------------------------------------------------------- |
+| **Dữ liệu không hợp lệ**                                                             | "Dữ liệu không hợp lệ. Vui lòng kiểm tra và nhập lại" | 400 BAD REQUEST<br>`{"error: INVALID_INPUT"}`            |
+| **Lỗi hệ thống(máy chủ không truy cập được database hệ thống, backend gặp lỗi,...)** | "Máy chủ xảy ra vấn đề. Vui lòng quay lại sau"        | 500 INTERNAL SERVER ERROR<br>`{"error: INTERNAL_ERROR"}` |
 
 #### 3.6. Flow /myshares
+
 ##### 1\. Mục tiêu của flow
 
 Liệt kê các link chia sẻ mà người dùng đã tạo.
 
-* **Logic:** FE gọi GET /v1/shares → Backend lấy danh sách shares theo telegram_id → trả về danh sách theo thứ tự mới nhất trước.
+- **Logic:** FE gọi GET /v1/shares → Backend lấy danh sách shares theo telegram_id → trả về danh sách theo thứ tự mới nhất trước.
 
 ##### 2\. Điều kiện kích hoạt (Trigger)
 
-  * **User:** Gõ lệnh `/myshares`
-  * **Backend Endpoint:**  `GET /v1/shares`
+- **User:** Gõ lệnh `/myshares`
+- **Backend Endpoint:** `GET /v1/shares`
 
-  ###### 3\. Các actor liên quan
+###### 3\. Các actor liên quan
 
-  * User (Sender)
-  * Bot Telegram (FE Logic)
-  * Backend API
+- User (Sender)
+- Bot Telegram (FE Logic)
+- Backend API
 
 ##### 4\. Conversation Flow (Chi tiết)
 
 ###### 4.1. Bước 1 – User yêu cầu xem danh sách share
+
 **User:**
 `/myshares`
 
 **Bot:**
-*(Bot nhận event, trích xuất `telegram_id` và `username` từ message của người dùng)*
+_(Bot nhận event, trích xuất `telegram_id` và `username` từ message của người dùng)_
 
 ###### 4.2. Bot gọi API lấy danh sách shares
+
 **API gọi (FE -\> BE):**
 
-  * **Endpoint:** `GET /v1/shares`
-  * **Headers** (Dùng để định danh user):
-    ```http
-    X-Telegram-ID: 123456789
-    X-Telegram-Username: nguyen_van_a
-    ```
+- **Endpoint:** `GET /v1/shares`
+- **Headers** (Dùng để định danh user):
+  ```http
+  X-Telegram-ID: 123456789
+  X-Telegram-Username: nguyen_van_a
+  ```
 
 **Backend xử lý (Logic):**
 
@@ -436,48 +438,50 @@ Liệt kê các link chia sẻ mà người dùng đã tạo.
 
 ##### 5\. Error Handling
 
-| Tình huống | Bot phản hồi | Backend trả về |
-| :--- | :--- | :--- |
-| **Thiếu thông tin định danh** (Header rỗng) | "Lỗi hệ thống: Không xác định được người dùng." | **400 Bad Request**<br>`{ "error": "MISSING_TELEGRAM_INFO" }` |
-| **Lỗi Database** (Connect/Insert fail) | "Hệ thống đang bận. Vui lòng thử lại sau." | **500 Internal Server Error**<br>`{ "error": "INTERNAL_ERROR" }` |
- 
+| Tình huống                                  | Bot phản hồi                                    | Backend trả về                                                   |
+| :------------------------------------------ | :---------------------------------------------- | :--------------------------------------------------------------- |
+| **Thiếu thông tin định danh** (Header rỗng) | "Lỗi hệ thống: Không xác định được người dùng." | **400 Bad Request**<br>`{ "error": "MISSING_TELEGRAM_INFO" }`    |
+| **Lỗi Database** (Connect/Insert fail)      | "Hệ thống đang bận. Vui lòng thử lại sau."      | **500 Internal Server Error**<br>`{ "error": "INTERNAL_ERROR" }` |
 
 
 
 #### 3.7. Flow /revoke
+
 ##### 1\. Mục tiêu của flow
 
 Thu hồi (vô hiệu hóa) một link chia sẻ.
 
 ##### 2\. Điều kiện kích hoạt (Trigger)
 
-  * **User:** Gõ lệnh `/revoke <id>`
-  * **Backend Endpoint:**  `POST /v1/shares/:id/revoke`
+- **User:** Gõ lệnh `/revoke <id>`
+- **Backend Endpoint:** `POST /v1/shares/:id/revoke`
 
 ##### 3\. Các actor liên quan
 
-  * User 
-  * Bot Telegram (FE Logic)
-  * Backend API
+- User
+- Bot Telegram (FE Logic)
+- Backend API
 
 ##### 4\. Conversation Flow (Chi tiết)
 
 ###### 4.1. Bước 1 – User yêu cầu thu hồi share
+
 **User:**
- `/revoke 10`
+`/revoke 10`
 
- **Bot:**
-*(Parse id = 10, chuẩn bị gọi API)*
+**Bot:**
+_(Parse id = 10, chuẩn bị gọi API)_
 
-###### 4.2. Bước 2 – Bot gọi API revoke share 
+###### 4.2. Bước 2 – Bot gọi API revoke share
+
 **API gọi (FE -\> BE):**
 
-  * **Endpoint:** `POST /v1/shares/:id/revoke`
-  * **Headers** (Dùng để định danh user):
-    ```http
-    X-Telegram-ID: 123456789
-    X-Telegram-Username: nguyen_van_a
-    ```
+- **Endpoint:** `POST /v1/shares/:id/revoke`
+- **Headers** (Dùng để định danh user):
+  ```http
+  X-Telegram-ID: 123456789
+  X-Telegram-Username: nguyen_van_a
+  ```
 
 **Backend xử lý (Logic):**
 
@@ -512,16 +516,16 @@ Thu hồi (vô hiệu hóa) một link chia sẻ.
 
 ##### 5\. Error Handling
 
-| Tình huống | Bot phản hồi | Backend trả về |
-| :--- | :--- | :--- |
-| **Thiếu thông tin định danh** (Header rỗng) | "Lỗi hệ thống: Không xác định được người dùng." | **400 Bad Request**<br>`{ "error": "MISSING_TELEGRAM_INFO" }` |
-| **Share không tồn tại hoặc không thuộc sở hữu** | "Không tìm thấy link hoặc bạn không có quyền thu hồi."| **404 Not Found**<br>`{ "error": "NOT_FOUND" }` |
-| **Lỗi Database** (Connect/Insert fail) | "Hệ thống đang bận. Vui lòng thử lại sau." | **500 Internal Server Error**<br>`{ "error": "INTERNAL_ERROR" }` |
-
+| Tình huống                                      | Bot phản hồi                                           | Backend trả về                                                   |
+| :---------------------------------------------- | :----------------------------------------------------- | :--------------------------------------------------------------- |
+| **Thiếu thông tin định danh** (Header rỗng)     | "Lỗi hệ thống: Không xác định được người dùng."        | **400 Bad Request**<br>`{ "error": "MISSING_TELEGRAM_INFO" }`    |
+| **Share không tồn tại hoặc không thuộc sở hữu** | "Không tìm thấy link hoặc bạn không có quyền thu hồi." | **404 Not Found**<br>`{ "error": "NOT_FOUND" }`                  |
+| **Lỗi Database** (Connect/Insert fail)          | "Hệ thống đang bận. Vui lòng thử lại sau."             | **500 Internal Server Error**<br>`{ "error": "INTERNAL_ERROR" }` |
 
 #### 3.8. Flow người nhận tải file
 
 (Luồng GET /v1/shares/:id → authorize → download)
+
 1. Mục tiêu của flow
 
 Cho phép người nhận (recipient) tải xuống file được chia sẻ qua link.
@@ -540,7 +544,6 @@ Gửi link tải xuống cho người nhận
 User: Nhấn vào link được chia sẻ → Bot nhận deep-link dạng:
 
 /start dl_SHARETOKEN
-
 
 Bot FE trích ra SHARE_TOKEN và gọi API BE tương ứng:
 
@@ -563,14 +566,13 @@ Backend API
 Object Storage (MinIO/S3)
 
 4. Conversation Flow (Chi tiết)
-4.1. Bước 1 – User nhấn vào link chia sẻ
+   4.1. Bước 1 – User nhấn vào link chia sẻ
 
 User:
 (Nhấn vào link: https://domain.com/dl/abcd1234
- → Telegram mở bot với payload)
+→ Telegram mở bot với payload)
 
 /start dl_abcd1234
-
 
 Bot:
 (Trích xuất token = "abcd1234")
@@ -583,12 +585,10 @@ Endpoint:
 
 GET /v1/shares/abcd1234
 
-
 Headers:
 
 X-Telegram-ID: 987654321
 X-Telegram-Username: user_b
-
 
 Backend xử lý (Logic):
 
@@ -609,24 +609,23 @@ có cần password / TOTP hay không
 Backend trả về (ví dụ link hợp lệ – không password – không TOTP):
 
 {
-  "data": {
-    "share_id": "abcd1234",
-    "file_name": "document.pdf",
-    "file_size": 1340023,
-    "expires_in": 7200,
-    "password_required": false,
-    "totp_required": false
-  }
+"data": {
+"share_id": "abcd1234",
+"file_name": "document.pdf",
+"file_size": 1340023,
+"expires_in": 7200,
+"password_required": false,
+"totp_required": false
 }
-
+}
 
 Bot gửi User:
 
- document.pdf (1.34 MB)
- Link còn hiệu lực trong 2 giờ.
+document.pdf (1.34 MB)
+Link còn hiệu lực trong 2 giờ.
 
 Bạn muốn tải xuống chứ?
- Chọn Tải xuống.
+Chọn Tải xuống.
 
 4.3. Bước 3 – Người dùng nhấn “Tải xuống”
 
@@ -637,7 +636,6 @@ API gọi (FE → BE):
 
 GET /v1/shares/abcd1234/download
 
-
 Backend xử lý:
 
 Ghi audit log “USER_DOWNLOADED_FILE”
@@ -647,14 +645,13 @@ Tạo presigned URL từ S3/MinIO
 Backend trả về:
 
 {
-  "download_url": "https://s3-presigned-url..."
+"download_url": "https://s3-presigned-url..."
 }
-
 
 Bot phản hồi User:
 
- File sẵn sàng!
- Đây là link tải của bạn:
+File sẵn sàng!
+Đây là link tải của bạn:
 https://s3-presigned-url
 ...
 
@@ -664,36 +661,32 @@ Nhánh bổ sung theo rule (nếu có)
 Backend (Step 2) trả:
 
 {
-  "password_required": true
+"password_required": true
 }
-
 
 Bot:
 
- File này được bảo vệ bằng mật khẩu.
+File này được bảo vệ bằng mật khẩu.
 Vui lòng nhập mật khẩu.
 
 User:
 
 mypassword
 
-
 Bot → API:
 
 POST /v1/shares/abcd1234/verify-password
 {
-  "password": "mypassword"
+"password": "mypassword"
 }
-
 
 Nếu đúng:
 
 { "status": "ok" }
 
-
 Bot:
 
- Mật khẩu chính xác.
+Mật khẩu chính xác.
 Bấm Tải xuống để nhận file.
 
 4.5. Nếu share yêu cầu TOTP
@@ -701,36 +694,32 @@ Bấm Tải xuống để nhận file.
 Backend trả:
 
 {
-  "totp_required": true
+"totp_required": true
 }
-
 
 Bot:
 
- File yêu cầu mã xác thực 2 lớp (TOTP).
+File yêu cầu mã xác thực 2 lớp (TOTP).
 Vui lòng nhập mã 6 số.
 
 User:
 
 123456
 
-
 Bot → API:
 
 POST /v1/shares/abcd1234/verify-totp
 {
-  "code": "123456"
+"code": "123456"
 }
-
 
 Nếu đúng:
 
 { "status": "ok" }
 
-
 Bot:
 
- Xác thực thành công.
+Xác thực thành công.
 Bấm Tải xuống để nhận file.
 
 4.6. Nếu share hết hạn
@@ -739,10 +728,9 @@ Backend trả:
 
 { "error": "LINK_EXPIRED" }
 
-
 Bot:
 
- Link đã hết hạn.
+Link đã hết hạn.
 Vui lòng yêu cầu người gửi tạo link mới.
 
 4.7. Nếu share bị thu hồi
@@ -751,10 +739,9 @@ Backend trả:
 
 { "error": "LINK_REVOKED" }
 
-
 Bot:
 
- Link này đã bị thu hồi bởi người gửi.
+Link này đã bị thu hồi bởi người gửi.
 
 4.8. Nếu user không nằm trong danh sách allowed recipients
 
@@ -762,10 +749,9 @@ Backend trả:
 
 { "error": "USER_NOT_ALLOWED" }
 
-
 Bot:
 
- Bạn không có quyền tải file này.
+Bạn không có quyền tải file này.
 
 4.9. Nếu file đã bị xóa
 
@@ -773,24 +759,27 @@ Backend trả:
 
 { "error": "FILE_NOT_FOUND" }
 
-
 Bot:
 
- File không còn tồn tại trong hệ thống.
+File không còn tồn tại trong hệ thống.
 
 5. Error Handling
-Tình huống|	Bot phản hồi|	Backend trả về
-| :--- | :--- | :--- |
-Sai password|	“ Mật khẩu không đúng.”|	INVALID_PASSWORD
-Sai TOTP|	“ Mã xác thực không hợp lệ.”|	INVALID_TOTP
-Link hết hạn|	“ Link đã hết hạn.”|	LINK_EXPIRED
-Không được phép|	“ Bạn không có quyền.”|	USER_NOT_ALLOWED
-File bị xóa|	“File không tồn tại.”|	FILE_NOT_FOUND
-Lỗi hệ thống|	“Hệ thống đang bận, thử lại sau.”|	INTERNAL_ERROR
+   Tình huống| Bot phản hồi| Backend trả về
+   | :--- | :--- | :--- |
+   Sai password| “ Mật khẩu không đúng.”| INVALID_PASSWORD
+   Sai TOTP| “ Mã xác thực không hợp lệ.”| INVALID_TOTP
+   Link hết hạn| “ Link đã hết hạn.”| LINK_EXPIRED
+   Không được phép| “ Bạn không có quyền.”| USER_NOT_ALLOWED
+   File bị xóa| “File không tồn tại.”| FILE_NOT_FOUND
+   Lỗi hệ thống| “Hệ thống đang bận, thử lại sau.”| INTERNAL_ERROR
 
 ## 4. State Diagram cho Bot
 
-(Sơ đồ FSM liệt kê tất cả các trạng thái bot từ upload, share, nhập pass…)
+Sơ đồ FSM liệt kê tất cả các trạng thái bot từ upload, share, nhập pass, download file...
+
+![Telegram Bot State Diagram](Telegram%20Bot%20State%20Diagram.svg)
+
+File PlantUML diagram: `telegram-bot-state-diagram.puml` (ở thư mục root của project)
 
 ## 5. API Mapping (Bot → Backend)
 

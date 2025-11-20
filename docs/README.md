@@ -136,7 +136,7 @@ Hiển thị danh sách tất cả các file mà người dùng đã upload lên
 
 **API gọi:**
 
-```http
+```
 GET /api/v1/files
 Headers:
   X-Telegram-User-Id: 123456789
@@ -564,7 +564,7 @@ Cho phép người nhận mở link chia sẻ và tải file.
 **4.2. Bước 2 – Authorize (nếu share bảo vệ)**
 
 **Password-protected:**
-```json
+```
 POST /v1/shares/:id/authorize
 {
   "password": "abc123"
@@ -582,7 +582,7 @@ POST /v1/shares/:id/authorize
 **4.3. Bước 3 – Tải file**
 
 **FE gọi:**
-```json
+```
 GET /v1/shares/:id/download
 Authorization: Bearer <temporary_access_token>  (nếu cần)
 ```

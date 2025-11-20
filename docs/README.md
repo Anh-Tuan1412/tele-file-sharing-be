@@ -42,6 +42,8 @@
 
 (Sơ đồ FSM liệt kê tất cả các trạng thái bot từ upload, share, nhập pass…)
 
+Sơ đồ nằm trong thư mục out
+
 ### 5. API mapping
 
 ## 5. API Mapping (Bot → Backend)

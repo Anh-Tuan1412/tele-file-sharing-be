@@ -12,7 +12,5 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Thêm các bước triển khai của bạn ở đây
       - name: Deploy to production
         run: echo "Deploying..."
-

@@ -1,8 +1,7 @@
 # Mock Conversation Flow cho Bot Telegram
 
-### 1. Giới thiệu
+## 1. Giới thiệu
 
-### 2. Danh sách Command của Bot
 ## 2. Danh sách Command của Bot
 
 Các command chính mà người dùng có thể sử dụng để tương tác với Bot, cùng với mô tả chức năng của chúng.
@@ -16,38 +15,38 @@ Các command chính mà người dùng có thể sử dụng để tương tác 
 | **`/myshares`** | Liệt kê các link chia sẻ mà người dùng đã tạo. | `GET /v1/shares` |
 | **`/revoke`** | Bắt đầu luồng thu hồi (vô hiệu hóa) một link chia sẻ. | `POST /v1/shares/:id/revoke` |
 
-### 3. Mock Conversation Flow
+## 3. Mock Conversation Flow
 
-##### 3.1. Flow /start
+#### 3.1. Flow /start
 
 
-###### 1\. Mục tiêu của flow
+##### 1\. Mục tiêu của flow
 
 Khởi tạo phiên làm việc cho người dùng.
 
   * **Logic:** Backend kiểm tra thông tin từ Telegram. Nếu user chưa tồn tại trong bảng `users`, hệ thống tự động tạo mới (Auto-register). Nếu đã tồn tại, trả về thông tin hiện có.
 
-###### 2\. Điều kiện kích hoạt (Trigger)
+##### 2\. Điều kiện kích hoạt (Trigger)
 
   * **User:** Gõ lệnh `/start`
   * **Backend Endpoint:** `GET /v1/me`
 
-###### 3\. Các actor liên quan
+##### 3\. Các actor liên quan
 
   * User (Sender)
   * Bot Telegram (FE Logic)
   * Backend API
 
-###### 4\. Conversation Flow (Chi tiết)
+##### 4\. Conversation Flow (Chi tiết)
 
-**4.1. Bước 1 – User bắt đầu**
+###### 4.1. Bước 1 – User bắt đầu
 **User:**
 `/start`
 
 **Bot:**
 *(Bot nhận event, trích xuất `telegram_id` và `username` từ message của người dùng)*
 
-**4.2. Bước 2 – Bot gọi API (Get or Create User)**
+###### 4.2. Bước 2 – Bot gọi API (Get or Create User)
 **API gọi (FE -\> BE):**
 
   * **Endpoint:** `GET /v1/me`
@@ -76,7 +75,7 @@ Khởi tạo phiên làm việc cho người dùng.
 }
 ```
 
-**4.3. Bước 3 – Bot phản hồi User**
+###### 4.3. Bước 3 – Bot phản hồi User**
 
 **Bot:**
 
@@ -87,7 +86,7 @@ Khởi tạo phiên làm việc cho người dùng.
 > 📤 Gửi file trực tiếp để upload.
 > ❓ Gõ /help để xem hướng dẫn.
 
-###### 5\. Error Handling
+##### 5\. Error Handling
 
 | Tình huống | Bot phản hồi | Backend trả về |
 | :--- | :--- | :--- |
@@ -96,34 +95,34 @@ Khởi tạo phiên làm việc cho người dùng.
 
 
 
-##### 3.2. Flow /upload
+#### 3.2. Flow /upload
 
 (Hội thoại mẫu + bước gửi file)
 
-##### 3.3. Flow POST /v1/files + /complete
+#### 3.3. Flow POST /v1/files + /complete
 
 (Luồng hoàn tất upload)
 
-##### 3.4. Flow /myfiles
+#### 3.4. Flow /myfiles
 
-###### 1\. Mục tiêu của flow
+##### 1\. Mục tiêu của flow
 
 Hiển thị danh sách tất cả các file mà người dùng đã upload lên hệ thống, giúp người dùng dễ dàng quản lý và tạo link chia sẻ cho các file của mình.
 
-###### 2\. Điều kiện kích hoạt (Trigger)
+##### 2\. Điều kiện kích hoạt (Trigger)
 
   * **Bot lệnh:** `/myfiles`
   * **Backend liên quan:** `GET /api/v1/files`
 
-###### 3\. Các actor liên quan
+##### 3\. Các actor liên quan
 
   * User (Sender)
   * Bot Telegram (FE)
   * Backend API
 
-###### 4\. Conversation Flow (Hội thoại chi tiết)
+##### 4\. Conversation Flow (Hội thoại chi tiết)
 
-**4.1. Bước 1 – User gửi command**
+###### 4.1. Bước 1 – User gửi command
 
 **User:**
 `/myfiles`
@@ -133,7 +132,7 @@ Hiển thị danh sách tất cả các file mà người dùng đã upload lên
 ⏳ Đang tải danh sách file của bạn...
 ```
 
-**4.2. Bước 2 – Bot gọi API**
+###### 4.2. Bước 2 – Bot gọi API
 
 **API gọi:**
 ```http
@@ -180,7 +179,7 @@ Headers:
 ]
 ```
 
-**4.3. Bước 3 – Bot hiển thị danh sách**
+###### 4.3. Bước 3 – Bot hiển thị danh sách
 
 **Bot:**
 
@@ -206,7 +205,7 @@ Headers:
 📝 Tổng: 3 files (9.5 MB)
 ```
 
-###### 5\. Error Handling
+##### 5\. Error Handling
 
 | Tình huống | Bot phản hồi | Backend trả về |
 | :--- | :--- | :--- |
@@ -215,7 +214,7 @@ Headers:
 | **Lỗi Database** | "❌ Hệ thống đang gặp sự cố. Vui lòng thử lại sau." | **500 Internal Server Error**<br>`{ "error": "database error" }` |
 | **Timeout kết nối** | "❌ Không thể kết nối đến server. Vui lòng kiểm tra mạng và thử lại." | **503 Service Unavailable**<br>`{ "error": "connection timeout" }` |
 
-##### 3.5. Flow /share
+#### 3.5. Flow /share
 
 (Luồng chọn file → đặt password → thời hạn → recipients)
 
@@ -346,14 +345,14 @@ Bot:
 
 
 
-##### 3.6. Flow /myshares
-###### 1\. Mục tiêu của flow
+#### 3.6. Flow /myshares
+##### 1\. Mục tiêu của flow
 
 Liệt kê các link chia sẻ mà người dùng đã tạo.
 
 * **Logic:** FE gọi GET /v1/shares → Backend lấy danh sách shares theo telegram_id → trả về danh sách theo thứ tự mới nhất trước.
 
-###### 2\. Điều kiện kích hoạt (Trigger)
+##### 2\. Điều kiện kích hoạt (Trigger)
 
   * **User:** Gõ lệnh `/myshares`
   * **Backend Endpoint:**  `GET /v1/shares`
@@ -364,16 +363,16 @@ Liệt kê các link chia sẻ mà người dùng đã tạo.
   * Bot Telegram (FE Logic)
   * Backend API
 
-###### 4\. Conversation Flow (Chi tiết)
+##### 4\. Conversation Flow (Chi tiết)
 
-**4.1. Bước 1 – User yêu cầu xem danh sách share**
+###### 4.1. Bước 1 – User yêu cầu xem danh sách share
 **User:**
 `/myshares`
 
 **Bot:**
 *(Bot nhận event, trích xuất `telegram_id` và `username` từ message của người dùng)*
 
-**4.2. Bot gọi API lấy danh sách shares**
+###### 4.2. Bot gọi API lấy danh sách shares
 **API gọi (FE -\> BE):**
 
   * **Endpoint:** `GET /v1/shares`
@@ -422,7 +421,7 @@ Liệt kê các link chia sẻ mà người dùng đã tạo.
 ]
 ```
 
-**4.3. Bước 3 – Bot phản hồi User**
+###### 4.3. Bước 3 – Bot phản hồi User
 
 **Bot:**
 
@@ -437,7 +436,7 @@ Liệt kê các link chia sẻ mà người dùng đã tạo.
 > Bạn chưa tạo link chia sẻ nào.
 > Hãy gửi một file để bắt đầu chia sẻ nhé! 📤
 
-###### 5\. Error Handling
+##### 5\. Error Handling
 
 | Tình huống | Bot phản hồi | Backend trả về |
 | :--- | :--- | :--- |
@@ -447,32 +446,32 @@ Liệt kê các link chia sẻ mà người dùng đã tạo.
 
 
 
-##### 3.7. Flow /revoke
-###### 1\. Mục tiêu của flow
+#### 3.7. Flow /revoke
+##### 1\. Mục tiêu của flow
 
 Thu hồi (vô hiệu hóa) một link chia sẻ.
 
-###### 2\. Điều kiện kích hoạt (Trigger)
+##### 2\. Điều kiện kích hoạt (Trigger)
 
   * **User:** Gõ lệnh `/revoke <id>`
   * **Backend Endpoint:**  `POST /v1/shares/:id/revoke`
 
-  ###### 3\. Các actor liên quan
+##### 3\. Các actor liên quan
 
   * User 
   * Bot Telegram (FE Logic)
   * Backend API
 
-  ###### 4\. Conversation Flow (Chi tiết)
+##### 4\. Conversation Flow (Chi tiết)
 
-**4.1. Bước 1 – User yêu cầu thu hồi share**
+###### 4.1. Bước 1 – User yêu cầu thu hồi share
 **User:**
  `/revoke 10`
 
  **Bot:**
 *(Parse id = 10, chuẩn bị gọi API)*
 
-**4.2. Bước 2 – Bot gọi API revoke share**
+###### 4.2. Bước 2 – Bot gọi API revoke share 
 **API gọi (FE -\> BE):**
 
   * **Endpoint:** `POST /v1/shares/:id/revoke`
@@ -502,7 +501,7 @@ Thu hồi (vô hiệu hóa) một link chia sẻ.
 }
 ```
 
-**4.3. Bước 3 – Bot phản hồi User**
+###### 4.3. Bước 3 – Bot phản hồi User
 
 **Bot:**
 
@@ -513,7 +512,7 @@ Thu hồi (vô hiệu hóa) một link chia sẻ.
 
 > ❌ Bạn không có quyền thu hồi link này.
 
-###### 5\. Error Handling
+##### 5\. Error Handling
 
 | Tình huống | Bot phản hồi | Backend trả về |
 | :--- | :--- | :--- |
@@ -522,7 +521,7 @@ Thu hồi (vô hiệu hóa) một link chia sẻ.
 | **Lỗi Database** (Connect/Insert fail) | "Hệ thống đang bận. Vui lòng thử lại sau." | **500 Internal Server Error**<br>`{ "error": "INTERNAL_ERROR" }` |
 
 
-##### 3.8. Flow người nhận tải file
+#### 3.8. Flow người nhận tải file
 
 (Luồng GET /v1/shares/:id → authorize → download)
 1. Mục tiêu của flow
@@ -791,11 +790,9 @@ Không được phép|	“ Bạn không có quyền.”|	USER_NOT_ALLOWED
 File bị xóa|	“File không tồn tại.”|	FILE_NOT_FOUND
 Lỗi hệ thống|	“Hệ thống đang bận, thử lại sau.”|	INTERNAL_ERROR
 
-### 4. State Diagram cho Bot
+## 4. State Diagram cho Bot
 
 (Sơ đồ FSM liệt kê tất cả các trạng thái bot từ upload, share, nhập pass…)
-
-### 5. API mapping
 
 ## 5. API Mapping (Bot → Backend)
 

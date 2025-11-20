@@ -217,27 +217,25 @@ Headers:
 
 #### 3.5. Flow /share
 
-###### 1\. Mục tiêu của flow:
+##### 1\. Mục tiêu của flow:
 
 Cho phép người dùng tạo một chia sẻ cho một file mà mình đã upload lên hệ thống
 
-###### 2\. Điều kiện kích hoạt:
+##### 2\. Điều kiện kích hoạt:
 
 **Bot lệnh:** `/share`
 
 **Backend liên quan:** `POST /v1/shares`
 
-###### 3\. Các actor liên quan:
+##### 3\. Các actor liên quan:
 
 - User(Sender)
-
 - Bot Telegram
-
 - Backend API
 
-###### 4\. Conservation flow
+##### 4\. Conservation flow
 
-**4.1. Bước 1 - User gửi command**
+###### 4.1. Bước 1 - User gửi command
 
 **User:**
 
@@ -247,7 +245,7 @@ Cho phép người dùng tạo một chia sẻ cho một file mà mình đã upl
 
 > Hãy chọn một file mà bạn muốn tạo chia sẻ
 
-**4.2 Bước 2 - User chọn file**
+###### 4.2 Bước 2 - User chọn file
 
 **User:**
 
@@ -257,7 +255,7 @@ Cho phép người dùng tạo một chia sẻ cho một file mà mình đã upl
 
 > Hãy nhập ngày bắt đầu và ngày kết thúc hiệu lực của link chia sẻ của file
 
-**4.3 Bước 3 - User nhập ngày**
+###### 4.3 Bước 3 - User nhập ngày
 
 **User:**
 
@@ -267,7 +265,7 @@ Cho phép người dùng tạo một chia sẻ cho một file mà mình đã upl
 
 > Bạn có muốn đặt mật khẩu không? Nhập "Có"/"Không"
 
-**4.4 Bước 4 - User đồng ý**
+###### 4.4 Bước 4 - User đồng ý
 
 **User:**
 
@@ -277,7 +275,7 @@ Cho phép người dùng tạo một chia sẻ cho một file mà mình đã upl
 
 > Hãy nhập mật khẩu mà bạn muốn
 
-**4.5 Bước 5 - User nhập mật khẩu**
+###### 4.5 Bước 5 - User nhập mật khẩu
 
 **User:**
 
@@ -287,7 +285,7 @@ Cho phép người dùng tạo một chia sẻ cho một file mà mình đã upl
 
 > Hãy nhập username Telegram của những người được phép tải file
 
-**4.6 Bước 6 - User nhập thông tin**
+###### 4.6 Bước 6 - User nhập thông tin
 
 **User:**
 
@@ -301,19 +299,12 @@ Cho phép người dùng tạo một chia sẻ cho một file mà mình đã upl
 
 ```
 {
-
   "file_id": 1234,
-
   "from_ts": "2025-11-05T00:00:00Z",
-
   "to_ts": "2025-11-10T00::00:00Z",
-
   "require_password": true,
-
   "password": "1234",
-
   "recipients": ["@huytran", "@anle"]
-
 }
 ```
 
@@ -321,13 +312,9 @@ Cho phép người dùng tạo một chia sẻ cho một file mà mình đã upl
 
 ```
 {
-
   "share_id": "1324",
-
   "Link": "https://api.fileshare.com/s/1324",
-
   "recipients": ["@huytran", "@anle"]
-
 }
 ```
 

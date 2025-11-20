@@ -110,94 +110,89 @@ Khởi tạo phiên làm việc cho người dùng.
 
 ##### 3.5. Flow /share
 
-(Luồng chọn file → đặt password → thời hạn → recipients)
-
-1. Mục tiêu của flow:
+###### 1\. Mục tiêu của flow:
 
 Cho phép người dùng tạo một chia sẻ cho một file mà mình đã upload lên hệ thống
 
-2. Điều kiện kích hoạt:
+###### 2\. Điều kiện kích hoạt:
 
-Bot lệnh:
+**Bot lệnh:** `/share`
 
-/share
+**Backend liên quan:** `POST /v1/shares`
 
-Backend liên quan:
+###### 3\. Các actor liên quan:
 
-POST /v1/shares
+* User(Sender)
 
-3. Các actor liên quan:
+* Bot Telegram
 
-User(Sender)
+* Backend API 
 
-Bot Telegram
+###### 4\. Conservation flow
 
-Backend API 
+**4.1. Bước 1 - User gửi command**
 
-4. Conservation flow
+**User:**
 
-4.1. Bước 1 - User gửi command
+`/share`
 
-User:
+**Bot:**
 
-/share
+> Hãy chọn một file mà bạn muốn tạo chia sẻ
 
-Bot:
+**4.2 Bước 2 - User chọn file**
 
-Hãy chọn một file mà bạn muốn tạo chia sẻ
+**User:**
 
-4.2 Bước 2 - User chọn file
+`Chọn một file`
 
-User:
+**Bot:**
 
-Chọn một file
+> Hãy nhập ngày bắt đầu và ngày kết thúc hiệu lực của link chia sẻ của file
 
-Bot:
+**4.3 Bước 3 - User nhập ngày**
 
-Hãy nhập ngày bắt đầu và ngày kết thúc hiệu lực của link chia sẻ của file
+**User:**
 
-4.3 Bước 3 - User nhập ngày
+> Nhập ngày bắt đầu và ngày hết hiệu lực
 
-User:
+**Bot:**
 
-Nhập ngày bắt đầu và ngày hết hiệu lực
+>Bạn có muốn đặt mật khẩu không? Nhập "Có"/"Không"
 
-Bot:
+**4.4 Bước 4 - User đồng ý** 
 
-Bạn có muốn đặt mật khẩu không? Nhập "Có"/"Không"
+**User:**
 
-4.4 Bước 4 - User đồng ý 
+`Nhập "Có"`
 
-User:
+**Bot:** 
 
-Nhập "Có"
+> Hãy nhập mật khẩu mà bạn muốn
 
-Bot: 
+**4.5 Bước 5 - User nhập mật khẩu**
 
-Hãy nhập mật khẩu mà bạn muốn
+**User:**
 
-4.5 Bước 5 - User nhập mật khẩu
+`Nhập mật khẩu`
 
-User:
+**Bot:**
 
-Nhập mật khẩu
+> Hãy nhập username Telegram của những người được phép tải file 
 
-Bot:
+**4.6 Bước 6 - User nhập thông tin**
 
-Hãy nhập username Telegram của những người được phép tải file 
+**User:**
 
-4.6 Bước 6 - User nhập thông tin
+`Nhập các username Telegram`
 
-User:
+**Bot:**
 
-Nhập các username Telegram
+**Gọi API:**
 
-Bot:
+`POST /v1/shares`
 
-Gọi API:
-
-POST /v1/shares
-
+```
 {
 
   "file_id": 1234,
@@ -213,9 +208,11 @@ POST /v1/shares
   "recipients": ["@huytran", "@anle"]
 
 }
+```
 
-Backend trả về:
+**Backend trả về:**
 
+```
 {
 
   "share_id": "1324",
@@ -225,17 +222,18 @@ Backend trả về:
   "recipients": ["@huytran", "@anle"]
 
 }
+```
 
-Bot:
+**Bot:**
 
-Đây là link chia sẻ của bạn: <u>Link</u>↗️. Chỉ có @huytran và @anle mới tải được.
+> Đây là link chia sẻ của bạn: <u>Link</u>↗️. Chỉ có @huytran và @anle mới tải được.
 
-5. Error Handling:
+###### 5.\ Error Handling:
 
 |Tình huống|Bot phản hồi|Backend trả|
 |:---|:---|:---|
-|Dữ liệu không hợp lệ|"Dữ liệu không hợp lệ. Vui lòng kiểm tra và nhập lại"|400 BAD REQUEST<br>{"error: INVALID_INPUT"}|
-|Lỗi hệ thống(máy chủ không truy cập được database hệ thống, backend gặp lỗi,...)|"Máy chủ xảy ra vấn đề. Vui lòng quay lại sau"|500 INTERNAL SERVER ERROR<br>{"error: INTERNAL_ERROR"}|
+|**Dữ liệu không hợp lệ**|"Dữ liệu không hợp lệ. Vui lòng kiểm tra và nhập lại"|400 BAD REQUEST<br>`{"error: INVALID_INPUT"}`|
+|**Lỗi hệ thống(máy chủ không truy cập được database hệ thống, backend gặp lỗi,...)**|"Máy chủ xảy ra vấn đề. Vui lòng quay lại sau"|500 INTERNAL SERVER ERROR<br>`{"error: INTERNAL_ERROR"}`|
 
 
 

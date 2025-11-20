@@ -850,8 +850,16 @@ components:
                 $ref: "#/components/schemas/ShareMetadataResponse"
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         '404':
           description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
 components:
   schemas:

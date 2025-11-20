@@ -96,11 +96,168 @@ _(Bot nhận event, trích xuất `telegram_id` và `username` từ message củ
 
 #### 3.2. Flow /upload
 
-(Hội thoại mẫu + bước gửi file)
+#### 3.2. Flow /upload
 
-#### 3.3. Flow POST /v1/files + /complete
+##### 1\. Mục Tiêu
 
-(Luồng hoàn tất upload)
+Cho phép người dùng upload file lên hệ thống
+
+##### 2\. Điều kiện kích hoạt
+
+- **Bot lệnh**:
+  `/upload`
+
+- **Backend liên quan**:
+  `POST /v1/files`
+  và
+  `POST /v1/files/{file_id}/report-complete`
+
+##### 3\. Các Actor liên quan
+
+- User (sender)
+- Telegram Bot (frontend logic)
+- Backend API
+- Database (PostgreSQL)
+- Object Storage (MinIO/S3)
+
+##### 4\. Conversation Flow
+
+###### 4.1. Bước 1 - User gửi command
+
+**User:** `/upload`
+
+**Bot:** `> Hãy chọn file bạn muốn upload...`
+
+###### 4.2. Bước 2 - User gửi file
+
+**User** gửi file cho bot
+
+**Bot** nhận file, trích xuất metadata
+
+###### 4.3. Bước 3 - Bot gọi API
+
+**API gọi:** `POST /v1/files`
+
+```
+Header:
+X-Telegram-User-Id: <telegram_id>
+X-Telegram-Username: <username>`
+```
+
+```json
+Request body:
+{
+  "filename": "photo.jpg",
+  "size": 204800,
+  "mime_type": "image/jpeg",
+  "created_at": "2025-11-09T14:00:00Z",
+  "updated_at": "2025-11-09T14:00:00Z"
+}
+```
+
+**Backend xử lý (Logic):**
+
+- Xác thực người dùng dựa trên Telegram headers.
+- Tạo bản ghi `files` trong DB (trạng thái `pending`).
+- Tạo URL upload (presigned URL) hoặc chấp nhận file trực tiếp.
+- Trả về `file_id`, `object_key`, và `upload_url` (nếu có).
+
+**Backend trả về (Response 200 OK):**
+
+```json
+Response body:
+{
+  "file_id": 101,
+  "object_key": "uploads/2025/11/09/photo_abc123.jpg",
+  "upload_url": "https://minio.example.com/presigned/abc123",
+  "status": "pending",
+  "created_at": "2025-11-09T14:00:00Z",
+  "updated_at": "2025-11-09T14:00:00Z"
+}
+```
+
+###### 4.4. Bước 4 - User tiếp tục upload file tới presigned link `upload_url`
+
+**User** Thực hiện upload file tới `upload_url`
+
+**Bot:**`Đang upload...`
+
+###### 4.5. Bước 5 - Bot tiếp tục gọi API
+
+**Bot gọi API:** `POST /api/v1/files/{file_id}/report-complete`
+
+```
+Path param: file_id
+```
+
+```
+Header:
+X-Telegram-User-Id: <telegram_id>
+X-Telegram-Username: <username>`
+```
+
+```json
+Request body:
+{
+  "status": "completed",
+  "report_type": "success",
+  "message": "Upload completed successfully",
+  "error_code": "FILE_TOO_LARGE",
+  "error_message": "File size exceeds limit",
+  "file_checksum": "a1b2c3d4e5f6",
+  "file_size_actual": 204800,
+  "upload_duration_ms": 5000,
+  "bandwidth_kbps": 512.5
+}
+```
+
+**Backend xử lý (Logic):**
+
+- Xác thực người dùng dựa trên Telegram headers.
+- Kiểm tra quyền sở hữu file.
+- Tạo bản ghi báo cáo (upload_reports).
+- Cập nhật trạng thái file (completed/failed).
+- Trả về thông tin báo cáo vừa tạo.
+
+**Backend trả về (Response 201 Created)**
+
+```json
+Response body:
+{
+  "report_id": 11,
+  "file_id": 42,
+  "status": "completed",
+  "report_type": "success",
+  "message": "Upload finished",
+  "reported_at": "2025-11-09T14:20:00Z"
+}
+```
+
+###### 4.6. Bước 6 - Bot phản hồi user
+
+**Bot:** File của bạn đã được upload thành công.
+
+##### 5\. Exception
+
+###### 5.1. Exceptions cho `POST /api/v1/files`
+
+| Tình huống                         | Bot phản hồi                                          | Backend trả                                   |
+| ---------------------------------- | ----------------------------------------------------- | --------------------------------------------- |
+| Missing Telegram headers           | `Lỗi hệ thống: Không xác định được người dùng.`       | `{ "error": "missing Telegram headers" }`     |
+| Invalid / malformed JSON (binding) | `Dữ liệu không hợp lệ. Vui lòng kiểm tra và gửi lại.` | `{ "error": "<binding error text>" }`         |
+| DB error creating user             | `Hệ thống đang bận. Vui lòng thử lại sau.`            | `{ "error": "failed to create user" }`        |
+| DB error inserting file record     | `Hệ thống đang bận. Vui lòng thử lại sau.`            | `{ "error": "failed to create file record" }` |
+
+###### 5.2. Exceptions cho `POST /api/v1/files/{file_id}/report-complete`
+
+| Tình huống                         | Bot phản hồi                                            | Backend trả                                      |
+| ---------------------------------- | ------------------------------------------------------- | ------------------------------------------------ |
+| Missing Telegram headers           | `Lỗi hệ thống: Không xác định được người dùng.`         | `{ "error": "missing Telegram headers" }`        |
+| Invalid `file_id` (not integer)    | `Yêu cầu không hợp lệ: file_id không hợp lệ.`           | `{ "error": "invalid file_id" }`                 |
+| Invalid / malformed JSON (binding) | `Dữ liệu không hợp lệ. Vui lòng kiểm tra và gửi lại.`   | `{ "error": "<binding error text>" }`            |
+| File not found or not owned        | `File không tìm thấy hoặc bạn không có quyền truy cập.` | `{ "error": "file not found or access denied" }` |
+| DB error creating report           | `Hệ thống đang bận. Vui lòng thử lại sau.`              | `{ "error": "failed to create report" }`         |
+| DB error updating file status      | `Hệ thống đang bận. Vui lòng thử lại sau.`              | `{ "error": "failed to update file status" }`    |
 
 #### 3.4. Flow /myfiles
 
@@ -430,8 +587,6 @@ _(Bot nhận event, trích xuất `telegram_id` và `username` từ message củ
 | **Thiếu thông tin định danh** (Header rỗng) | "Lỗi hệ thống: Không xác định được người dùng." | **400 Bad Request**<br>`{ "error": "MISSING_TELEGRAM_INFO" }`    |
 | **Lỗi Database** (Connect/Insert fail)      | "Hệ thống đang bận. Vui lòng thử lại sau."      | **500 Internal Server Error**<br>`{ "error": "INTERNAL_ERROR" }` |
 
-
-
 #### 3.7. Flow /revoke
 
 ##### 1\. Mục tiêu của flow
@@ -542,12 +697,12 @@ Cho phép người nhận mở link chia sẻ và tải file.
 - Storage
 
 ##### 4\. Conversation Flow (Chi tiết)
+
 **4.1. Bước 1 – Người nhận mở link**
 
 **FE gọi:**
 
 `GET /v1/shares/:id`
-
 
 **Backend xử lý:**
 
@@ -564,6 +719,7 @@ Cho phép người nhận mở link chia sẻ và tải file.
 **4.2. Bước 2 – Authorize (nếu share bảo vệ)**
 
 **Password-protected:**
+
 ```
 POST /v1/shares/:id/authorize
 {
@@ -582,6 +738,7 @@ POST /v1/shares/:id/authorize
 **4.3. Bước 3 – Tải file**
 
 **FE gọi:**
+
 ```
 GET /v1/shares/:id/download
 Authorization: Bearer <temporary_access_token>  (nếu cần)
@@ -601,14 +758,15 @@ Authorization: Bearer <temporary_access_token>  (nếu cần)
 **200 OK (binary stream)**
 
 ##### 5\. Error Handling
-   Tình huống| Bot phản hồi| Backend trả về
-   | :--- | :--- | :--- |
-   Sai password| “ Mật khẩu không đúng.”| INVALID_PASSWORD
-   Sai TOTP| “ Mã xác thực không hợp lệ.”| INVALID_TOTP
-   Link hết hạn| “ Link đã hết hạn.”| LINK_EXPIRED
-   Không được phép| “ Bạn không có quyền.”| USER_NOT_ALLOWED
-   File bị xóa| “File không tồn tại.”| FILE_NOT_FOUND
-   Lỗi hệ thống| “Hệ thống đang bận, thử lại sau.”| INTERNAL_ERROR
+
+| Tình huống      | Bot phản hồi                      | Backend trả về   |
+| :-------------- | :-------------------------------- | :--------------- |
+| Sai password    | “ Mật khẩu không đúng.”           | INVALID_PASSWORD |
+| Sai TOTP        | “ Mã xác thực không hợp lệ.”      | INVALID_TOTP     |
+| Link hết hạn    | “ Link đã hết hạn.”               | LINK_EXPIRED     |
+| Không được phép | “ Bạn không có quyền.”            | USER_NOT_ALLOWED |
+| File bị xóa     | “File không tồn tại.”             | FILE_NOT_FOUND   |
+| Lỗi hệ thống    | “Hệ thống đang bận, thử lại sau.” | INTERNAL_ERROR   |
 
 ## 4. State Diagram cho Bot
 

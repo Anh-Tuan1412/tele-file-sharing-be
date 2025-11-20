@@ -777,6 +777,8 @@ File không còn tồn tại trong hệ thống.
 
 Sơ đồ FSM liệt kê tất cả các trạng thái bot từ upload, share, nhập pass, download file...
 
+![Telegram Bot State Diagram](Telegram%20Bot%20State%20Diagram.svg)
+
 File PlantUML diagram: `telegram-bot-state-diagram.puml` (ở thư mục root của project)
 
 ## 5. API Mapping (Bot → Backend)

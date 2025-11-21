@@ -2,6 +2,8 @@
 
 ## 1. Giới thiệu
 
+Hỗ trợ viết conversation flow cho bot telegram.
+
 ## 2. Danh sách Command của Bot
 
 Các command chính mà người dùng có thể sử dụng để tương tác với Bot, cùng với mô tả chức năng của chúng.
@@ -80,12 +82,13 @@ _(Bot nhận event, trích xuất `telegram_id` và `username` từ message củ
 
 **Bot:**
 
-> Xin chào **nguyen_van_a**\! 👋
-> Tài khoản của bạn đã sẵn sàng.
->
-> Bạn có thể:
-> 📤 Gửi file trực tiếp để upload.
-> ❓ Gõ /help để xem hướng dẫn.
+```
+ Xin chào **nguyen_van_a**\! 👋
+ Tài khoản của bạn đã sẵn sàng.
+ Bạn có thể:
+ 📤 Gửi file trực tiếp để upload.
+ ❓ Gõ /help để xem hướng dẫn.
+```
 
 ##### 5\. Error Handling
 
@@ -774,7 +777,7 @@ Sơ đồ FSM liệt kê tất cả các trạng thái bot từ upload, share, n
 
 ![Telegram Bot State Diagram](Telegram%20Bot%20State%20Diagram.svg)
 
-File PlantUML diagram: `telegram-bot-state-diagram.puml` (ở thư mục root của project)
+File PlantUML diagram: `telegram-bot-state-diagram.puml` (ở thư mục docs của project)
 
 ## 5. API Mapping (Bot → Backend)
 

@@ -101,8 +101,13 @@ func main() {
 	}
 
 	// ---- Swagger UI ----
+	// Serve OpenAPI YAML at a fixed absolute URL so Swagger UI can fetch it reliably
 	router.StaticFile("/openapi.yaml", "./api/openapi.yaml")
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/openapi.yaml")))
+	// Important: use absolute URL for swagger UI
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(
+		swaggerFiles.Handler,
+		ginSwagger.URL("http://localhost:8080/openapi.yaml"),
+	))
 
 	// ---- 6. Khởi động HTTP Server ----
 	log.Printf("Starting server on %s", config.HTTPServerAddress)

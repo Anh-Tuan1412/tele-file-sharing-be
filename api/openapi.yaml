@@ -71,7 +71,7 @@ paths:
                   example: "image/jpeg"
                 created_at:
                   type: string
-                  formant: date-time
+                  format: date-time
                   example: "2025-11-09T14:00:00Z"
                 updated_at:
                   type: string
@@ -326,7 +326,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-
     post:
       summary: Tạo 1 chia sẻ mới cho file
       description: Tạo một link chia sẻ mới cho một file.
@@ -370,7 +369,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /api/v1/shares/{id}/revoke:
+  /v1/shares/{id}/revoke:
     post:
       summary: Thu hồi link chia sẻ
       description: Đánh dấu một link chia sẻ là đã thu hồi.
@@ -457,6 +456,89 @@ paths:
                 $ref: "#/components/schemas/Error"
         "500":
           description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/shares/{id}/authorize:
+    post:
+      summary: Xác thực mật khẩu cho link chia sẻ
+      description: |
+        Cho phép người dùng xác thực mật khẩu để truy cập link chia sẻ được bảo vệ.
+        Nếu mật khẩu đúng, hệ thống sẽ trả về token truy cập tạm thời.
+      tags:
+        - Authorization
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID của link chia sẻ
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - password
+              properties:
+                password:
+                  type: string
+                  description: Mật khẩu để xác thực
+                  example: "my-secret-pass-123"
+      responses:
+        "200":
+          description: Thành công – trả về token truy cập tạm thời
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: Token truy cập tạm thời
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        "400":
+          description: Dữ liệu đầu vào không hợp lệ hoặc mật khẩu sai
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Lỗi hệ thống
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/shares/{id}:
+    get:
+      summary: Lấy metadata của share
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Metadata của share
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShareMetadataResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found
           content:
             application/json:
               schema:
@@ -786,83 +868,6 @@ components:
         status:
           type: string
           example: "revoked"
-  /v1/shares/:id/authorize:
-    post:
-      summary: Xác thực mật khẩu cho link chia sẻ
-      description: |
-        Cho phép người dùng xác thực mật khẩu để truy cập link chia sẻ được bảo vệ.
-        Nếu mật khẩu đúng, hệ thống sẽ trả về token truy cập tạm thời.
-      tags:
-        - Authorization
-      parameters:
-        - name: id
-          in: URL
-          required: true
-          description: ID của link chia sẻ
-          schema:
-            type: integer
-            format: int64
-        - name: password
-          in: URL
-          required: true
-          description: Mật khẩu để xác thực
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Thành công – trả về token truy cập tạm thời
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  access_token:
-                    type: string
-                    description: Token truy cập tạm thời
-                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-        "400":
-          description: Dữ liệu đầu vào không hợp lệ hoặc mật khẩu sai
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          description: Lỗi hệ thống
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-  /v1/shares/{id}:
-    get:
-      summary: Lấy metadata của share
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Metadata của share
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ShareMetadataResponse"
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-components:
-  schemas:
     FileMetadata:
       type: object
       properties:
@@ -890,5 +895,3 @@ components:
         created_at: { type: string }
         file: { $ref: "#/components/schemas/FileMetadata" }
         owner: { $ref: "#/components/schemas/UserMinimal" }
-
-

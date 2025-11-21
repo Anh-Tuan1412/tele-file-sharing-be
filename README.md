@@ -6,28 +6,21 @@
 
     - Cài đặt [Docker](https://www.docker.com/products/docker-desktop/) và Docker Compose.
     - Cài đặt [Go](https://go.dev/doc/install) (phiên bản 1.2x trở lên).
-    - Cài đặt [Sops](https://github.com/getsops/sops) để giải mã file cấu hình (nếu cần).
 
 2.  **Cấu hình môi trường:**
 
     - Copy file `env/example.env` thành `env/dev.env`.
-    - Nếu dự án dùng file mã hoá, giải mã `env/dev.enc` vào `env/dev.env`. Lệnh tham khảo: `sops -d env/dev.enc > env/dev.env`.
     - Cập nhật các biến môi trường trong `env/dev.env` cho phù hợp với máy local của bạn.
 
-3.  **Khởi chạy các dịch vụ nền (database, cache...):**
+3.  **Chạy ứng dụng Go:**
 
-    - Mở terminal và chạy lệnh:
-
-    ```bash
-    docker compose up -d
-    ```
-
-    - Lệnh này sẽ khởi chạy các container được định nghĩa trong `docker-compose.yml` (ví dụ: PostgreSQL, Redis).
-
-4.  **Chạy ứng dụng Go:**
     - Tải các thư viện cần thiết: `go mod tidy`
-    - Chạy dịch vụ API: `go run ./cmd/api`
-    - Chạy dịch vụ Worker (nếu có): `go run ./cmd/worker`
+    - Chạy dịch vụ API: `go run ./cmd/api/main.go`
+
+4.  **Truy cập Swagger UI:**
+
+    - Truy cập [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html) để xem tài liệu API và thử nghiệm các endpoint.
+    - Xem các Mock Conversation Flow trong thư mục `docs/` để hiểu cách tương tác với bot.
 
 ## Cấu trúc thư mục
 

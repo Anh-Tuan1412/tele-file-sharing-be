@@ -17,7 +17,8 @@ RUN go mod download
 COPY . .
 
 # Build the application with memory optimization
-RUN CGO_ENABLED=0 GOOS=linux go build -buildvcs=false -ldflags="-s -w" -o main ./cmd/api
+RUN --mount=type=secret,id=DATABASE_URL \
+    CGO_ENABLED=0 GOOS=linux go build -buildvcs=false -ldflags="-s -w" -o main ./cmd/api
 
 # Final stage - minimal image
 FROM alpine:latest

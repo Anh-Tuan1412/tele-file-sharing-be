@@ -17,6 +17,10 @@ func LoadConfig(path string) (config *Config, err error) {
 	viper.SetConfigType("env")
 	viper.AutomaticEnv()
 
+	// Bind environment variables explicitly
+	viper.BindEnv("DATABASE_URL")
+	viper.BindEnv("HTTP_SERVER_ADDRESS")
+
 	// Try to read config file, but don't fail if it doesn't exist
 	// (in production on Fly.io, env vars are set directly)
 	if err = viper.ReadInConfig(); err != nil {

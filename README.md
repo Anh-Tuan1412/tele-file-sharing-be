@@ -1,5 +1,19 @@
 # Telegram file sharing
 
+### Danh sách thành viên
+| STT | MSSV    | Tên                    |
+|-----|---------|-------------------------|
+| 1   | 2212370 | Nguyễn Trọng Nhân      |
+| 2   | 2213696 | Nguyễn Chí Trung       |
+| 3   | 2352651 | Nguyễn Ngọc Tuấn Kiệt  |
+| 4   | 2312535 | Nguyễn Quỳnh Như       |
+| 5   | 2313854 | Trần Hoàng Uyên        |
+| 6   | 2252396 | Nguyễn Trung Kiên      |
+| 7   | 2312397 | Lê Bá Nguyễn           |
+| 8   | 22313452| Lê Trọng Tín           |
+| 9   | 2313739 | Mai Anh Tuấn           |
+|10   | 2312460 | Hoàng Giữ Tiến Nhất    |
+
 ## Hướng dẫn chạy dự án (Local Development)
 
 1.  **Cài đặt môi trường:**

@@ -78,6 +78,10 @@ func main() {
 	// ---- 5. Đăng ký API Routes ----
 	api := router.Group("/api")
 	{
+		// Health check endpoint
+		api.GET("/health", func(c *gin.Context) {
+			c.JSON(200, gin.H{"status": "ok"})
+		})
 		authed := api.Group("/")
 		authed.Use(authMiddleware)
 		{

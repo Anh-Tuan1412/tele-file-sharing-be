@@ -473,7 +473,7 @@ paths:
         - name: id
           in: path
           required: true
-          description: ID của link chia sẻ
+          description: ID của share
           schema:
             type: integer
             format: int64

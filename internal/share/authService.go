@@ -3,6 +3,7 @@ package share
 import (
 	"context"
 	"file-sharing/internal/storage"
+	"file-sharing/internal/files"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/golang-jwt/jwt/v5"
 	"time"
@@ -27,7 +28,16 @@ func NewAuthService(repo storage.ShareRepository) AuthServices {
 func CheckPasswordHash(password, hash string) bool {
 	// Giả sử sử dụng bcrypt để so sánh
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
+	if  err == nil{
+		println("Correct")
+		return true
+	} else if err == bcrypt.ErrMismatchedHashAndPassword {
+		println("Wrong Password!")
+		return false
+	} else {
+		println("Another errors!")
+		return false
+	}
 }
 
 func GenerateAccessToken(shareID int64) (string, error) {
@@ -49,7 +59,7 @@ func (a *AuthService) AuthorizeSharePasswordAndIssueToken(ctx context.Context, s
 	
 	// So sánh mật khẩu đã mã hóa với mật khẩu cung cấp
 	if !CheckPasswordHash(password, passwordHash) {
-		return "", err
+		return "", files.InvalidPasswordError()
 	}
 	// Nếu đúng, trả về một token để truy cập tạm thời
 	token, err = GenerateAccessToken(shareID)

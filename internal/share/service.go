@@ -131,7 +131,7 @@ func (s *shareService) CreatePresignedURL(ctx context.Context, shareID int64, re
 
 var (
 	// trả về khi share không tồn tại hoặc không được phép truy cập
-	ErrShareNotFoundOrAccessDenied = errors.New("share not found or access denied")
+	ErrShareNotFoundOrAccessDenied = storage.ErrShareNotFoundOrAccessDenied
 	// trả về khi share đã bị revoke hoặc đã hết hạn
 	ErrShareRevokedOrExpired = errors.New("share revoked or expired")
 	// trả khi đã đạt max_downloads

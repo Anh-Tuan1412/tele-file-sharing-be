@@ -51,7 +51,7 @@ func (r *postgresShareRepository) RevokeShare(ctx context.Context, shareID int64
 	const query = `
 		UPDATE shares
 		SET revoked = true, updated_at = NOW()
-		WHERE id = $1 AND owner_user_id = $2 
+		WHERE id = $1 AND owner_user_id = $2 AND revoked = false
 	`
 
 	result, err := r.db.ExecContext(ctx, query, shareID, ownerUserID)
@@ -65,12 +65,22 @@ func (r *postgresShareRepository) RevokeShare(ctx context.Context, shareID int64
 		return err
 	}
 
-	if rows == 0 {
-		// return errors.New("share not found or access denied")
-		return ErrShareNotFoundOrAccessDenied
+	if rows > 0 {
+		return nil
 	}
 
-	return nil
+	const checkQuery = `SELECT EXISTS(SELECT 1 FROM shares WHERE id = $1 AND owner_user_id = $2)`
+	var exists bool
+	err = r.db.GetContext(ctx, &exists, checkQuery, shareID, ownerUserID)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		return nil
+	}
+
+	return ErrShareNotFoundOrAccessDenied
 }
 
 func (r *postgresShareRepository) GetShareByID(ctx context.Context, shareID int64) (*model.Share, error) {

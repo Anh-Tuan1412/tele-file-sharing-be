@@ -2,15 +2,18 @@ package share
 
 import (
 	"context"
+	"file-sharing/internal/model"
 	"file-sharing/internal/storage"
 	"log"
-	"file-sharing/internal/model"
 )
 
 type Service interface {
 	RevokeShare(ctx context.Context, shareID int64, userID int64) error
 
 	ListShares(ctx context.Context, userID int64, limit, offset int) ([]model.Share, error)
+
+	// ListSharesWithDetails lấy danh sách shares kèm thông tin file và tổng số
+	ListSharesWithDetails(ctx context.Context, userID int64, limit, offset int) (*model.ShareListResponseDTO, error)
 
 	GetMetadata(ctx context.Context, id int64) (*model.ShareMetadataResponseDTO, error)
 }
@@ -42,6 +45,34 @@ func (s *shareService) ListShares(ctx context.Context, userID int64, limit, offs
 	}
 
 	return reports, nil
+}
+
+// ListSharesWithDetails lấy danh sách shares kèm thông tin file và tổng số để hỗ trợ pagination
+func (s *shareService) ListSharesWithDetails(ctx context.Context, userID int64, limit, offset int) (*model.ShareListResponseDTO, error) {
+	// Lấy danh sách shares kèm thông tin file
+	shares, err := s.repo.ListSharesWithFileByOwnerUserID(ctx, userID, limit, offset)
+	if err != nil {
+		log.Printf("Failed to list shares with details for user %d: %v", userID, err)
+		return nil, err
+	}
+
+	// Đếm tổng số shares
+	total, err := s.repo.CountSharesByOwnerUserID(ctx, userID)
+	if err != nil {
+		log.Printf("Failed to count shares for user %d: %v", userID, err)
+		return nil, err
+	}
+
+	if shares == nil {
+		shares = []model.ShareListItemDTO{} // Trả về mảng rỗng thay vì null
+	}
+
+	return &model.ShareListResponseDTO{
+		Shares: shares,
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+	}, nil
 }
 
 func (s *shareService) GetMetadata(ctx context.Context, id int64) (*model.ShareMetadataResponseDTO, error) {

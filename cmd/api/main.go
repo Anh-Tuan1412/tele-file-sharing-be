@@ -2,18 +2,19 @@ package main
 
 import (
 	"file-sharing/internal/config"
+	"file-sharing/internal/share"
 	"file-sharing/internal/storage"
 	"file-sharing/internal/transport/http"
-	"file-sharing/internal/share"
 	"log"
+
+	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"os"
-	"strings"
 )
 
 func main() {
@@ -49,14 +50,15 @@ func main() {
 			minioRepo = mr
 		}
 	}
-
+	// Khởi tạo File Repository (Đã sửa lỗi hàm khởi tạo) - nguyen_trung_kien_addded
+	fileRepo := storage.NewPostgresFileRepository(db)
 	shareRepo := storage.NewShareRepository(db, minioRepo)
 
 	// ---- 3. Khởi tạo Gin Router ----
 	router := gin.Default()
 
 	// ---- Khởi tạo Service ----
-    shareService := share.NewShareService(shareRepo)
+	shareService := share.NewShareService(shareRepo)
 
 	// --- Khởi tạo Auth Service ---
 	authService := share.NewAuthService(shareRepo)
@@ -64,16 +66,16 @@ func main() {
 	// ---- 4. Khởi tạo Handlers & Middlewares ----
 	userHandler := http.NewUserHandler()
 	authMiddleware := http.AuthMiddleware(userRepo)
-	fileHandler := http.InitFileUploadHandler(db.DB)
+	fileHandler := http.NewFileHandler(fileRepo, minioRepo)
 	listFilesHandler := http.ListUserFilesHandler(db.DB)
 	shareHandler := http.NewShareHandler(shareService)
 	// Authoize Password Handler
 	authorizePasswordHandler := http.NewAuthorizePasswordHandler(authService)
-    
-    // Report handlers (register these so client endpoints exist)
-    reportCompleteHandler := http.ReportUploadCompleteHandler(db.DB)
-    getReportHandler := http.GetUploadReportHandler(db.DB)
-    listReportsHandler := http.ListUploadReportsHandler(db.DB)
+
+	// Report handlers (register these so client endpoints exist)
+	reportCompleteHandler := http.ReportUploadCompleteHandler(db.DB)
+	getReportHandler := http.GetUploadReportHandler(db.DB)
+	listReportsHandler := http.ListUploadReportsHandler(db.DB)
 
 	// ---- 5. Đăng ký API Routes ----
 	api := router.Group("/api")
@@ -86,12 +88,12 @@ func main() {
 		authed.Use(authMiddleware)
 		{
 			authed.GET("/me", userHandler.GetCurrentUser)
-			authed.POST("/v1/files", fileHandler)
+			authed.POST("/v1/files", fileHandler.HandleFileInit)
 			authed.GET("/v1/files", listFilesHandler)
-            // report endpoints
-            authed.POST("/v1/files/:file_id/report-complete", reportCompleteHandler)
-            authed.GET("/v1/files/:file_id/report", getReportHandler)
-            authed.GET("/v1/upload-reports", listReportsHandler)
+			// report endpoints
+			authed.POST("/v1/files/:file_id/report-complete", reportCompleteHandler)
+			authed.GET("/v1/files/:file_id/report", getReportHandler)
+			authed.GET("/v1/upload-reports", listReportsHandler)
 
 			// flow 3.5: /share
 			authed.POST("v1/shares", shareHandler.HandleCreateShare)
@@ -102,8 +104,8 @@ func main() {
 			authed.GET("/v1/shares", shareHandler.HandleListShares)
 			authed.GET("/v1/shares/:id/download", shareHandler.HandleDownload)
 
-			// get metadata 
-    		authed.GET("/v1/shares/:id", shareHandler.HandleGetShareMetadata)
+			// get metadata
+			authed.GET("/v1/shares/:id", shareHandler.HandleGetShareMetadata)
 		}
 	}
 

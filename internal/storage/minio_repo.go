@@ -35,3 +35,19 @@ func (m *MinioRepo) PresignObject(ctx context.Context, objectKey string, expiryS
 	}
 	return u.String(), nil
 }
+
+// CreatePresignedPutURL tạo URL pre-signed cho việc tải lên (PUT) đối tượng.
+// Object Key là tên file duy nhất trên MinIO.
+// ContentType (dùng cho validation phía client)
+func (m *MinioRepo) CreatePresignedPutURL(ctx context.Context, objectKey string, contentType string) (string, error) {
+	// Thời hạn của URL (ví dụ: 15 phút)
+	expiry := time.Minute * 15
+
+	u, err := m.client.PresignedPutObject(ctx, m.bucketName, objectKey, expiry)
+	if err != nil {
+		return "", err
+	}
+
+	// Trả về URL đã tạo
+	return u.String(), nil
+}

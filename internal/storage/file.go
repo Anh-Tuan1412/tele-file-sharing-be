@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"log"
+	"time"
+
+	"file-sharing/internal/model"
 
 	"github.com/jmoiron/sqlx"
-	"file-sharing/internal/model"
 )
 
 // FileRepository interface for file operations
@@ -31,11 +33,18 @@ type FileRepository interface {
 
 	// UpdateUploadReportStatus updates the status of an upload report
 	UpdateUploadReportStatus(ctx context.Context, reportID int64, status string) error
+	// CreateFile tạo một bản ghi file mới trong DB
+	CreateFile(ctx context.Context, file model.File) (*model.File, error)
 }
 
 // postgresFileRepository is the PostgreSQL implementation of FileRepository
 type postgresFileRepository struct {
 	db *sqlx.DB
+}
+
+// Thêm hàm NewPostgresFileRepository để sử dụng trong main.go
+func NewPostgresFileRepository(db *sqlx.DB) *postgresFileRepository {
+	return &postgresFileRepository{db: db}
 }
 
 // NewFileRepository creates a new file repository
@@ -269,4 +278,48 @@ func (r *postgresFileRepository) UpdateUploadReportStatus(ctx context.Context, r
 	}
 
 	return nil
+}
+
+// CreateFile tạo một bản ghi file mới trong DB và lấy lại ID, thời gian.
+func (r *postgresFileRepository) CreateFile(ctx context.Context, file model.File) (*model.File, error) {
+	// Sử dụng $1, $2, ... và RETURNING để lấy các giá trị tự động tạo
+	const query = `
+        INSERT INTO files (
+            owner_user_id, filename, object_key, size, mime, status
+        ) VALUES (
+            $1, $2, $3, $4, $5, $6
+        ) RETURNING id, created_at, updated_at;
+    `
+
+	// Tạo một bản sao để tránh thay đổi bản gốc nếu có lỗi
+	createdFile := file
+
+	// Đảm bảo status là Pending
+	createdFile.Status = model.FileStatusPending
+
+	// Thực hiện truy vấn và lấy giá trị trả về
+	row := r.db.QueryRowxContext(ctx, query,
+		createdFile.OwnerUserID,
+		createdFile.Filename,
+		createdFile.ObjectKey,
+		createdFile.Size,
+		createdFile.Mime,
+		createdFile.Status)
+
+	var id int64
+	var createdAt time.Time // Cần import "time"
+	var updatedAt time.Time
+
+	err := row.Scan(&id, &createdAt, &updatedAt)
+	if err != nil {
+		log.Printf("Failed to create file and retrieve ID: %v", err)
+		return nil, err
+	}
+
+	// Gán lại các giá trị đã tạo từ DB vào struct
+	createdFile.ID = id
+	createdFile.CreatedAt = createdAt
+	createdFile.UpdatedAt = updatedAt
+
+	return &createdFile, nil
 }

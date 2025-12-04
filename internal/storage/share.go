@@ -8,6 +8,8 @@ import (
 	"log"
 )
 
+var ErrShareNotFoundOrAccessDenied = errors.New("share not found or access denied")
+
 type ShareRepository interface {
 	// RevokeShare cập nhật trạng thái revoked = true
 	// Check ownerUserID để đảm bảo chính chủ mới được revoke
@@ -64,7 +66,8 @@ func (r *postgresShareRepository) RevokeShare(ctx context.Context, shareID int64
 	}
 
 	if rows == 0 {
-		return errors.New("share not found or access denied")
+		// return errors.New("share not found or access denied")
+		return ErrShareNotFoundOrAccessDenied
 	}
 
 	return nil

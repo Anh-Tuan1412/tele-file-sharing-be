@@ -40,7 +40,8 @@ func (h *ShareHandler) HandleRevoke(c *gin.Context) {
 	err = h.service.RevokeShare(c.Request.Context(), shareID, user.ID)
 	if err != nil {
 		// Nếu lỗi là do không tìm thấy hoặc không đúng chủ sở hữu
-		if err.Error() == "share not found or access denied" {
+		// if err.Error() == "share not found or access denied" {
+		if errors.Is(err, share.ErrShareNotFoundOrAccessDenied) {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})

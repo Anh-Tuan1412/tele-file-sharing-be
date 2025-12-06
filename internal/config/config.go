@@ -9,6 +9,11 @@ import (
 type Config struct {
 	DatabaseURL       string `mapstructure:"DATABASE_URL"`
 	HTTPServerAddress string `mapstructure:"HTTP_SERVER_ADDRESS"`
+	MinioEndpoint     string `mapstructure:"MINIO_ENDPOINT"`
+	MinioAccessKey    string `mapstructure:"MINIO_ACCESS_KEY"`
+	MinioSecretKey    string `mapstructure:"MINIO_SECRET_KEY"`
+	MinioBucket       string `mapstructure:"MINIO_BUCKET"`
+	MinioUseSSL       string `mapstructure:"MINIO_USE_SSL"`
 }
 
 func LoadConfig(path string) (config *Config, err error) {

@@ -26,17 +26,7 @@ type Service interface {
 	CreatePresignedURL(ctx context.Context, shareID int64, requesterUserID int64, expirySeconds int) (string, error)
 
 	GetMetadata(ctx context.Context, id int64) (*model.ShareMetadataResponseDTO, error)
-	CreateShare(ctx context.Context, userID int64, req *CreateShareRequest) (*model.Share, error)
-}
-
-// đối tượng DTO mới để nhận request từ FE 
-// nên cải tiến lại trong docs cho giống với cấu trúc database hiện tại 
-// là không có việc nhập tên các người được phép tải recipients và from_ts (lấy luôn thời điểm lúc mới tạo xong) - ứng với 
-// trường created_at 
-type CreateShareRequest struct {
-	FileID    int64      `json:"file_id"`
-    Password  string     `json:"password"`
-    ExpiresAt *time.Time `json:"expires_at"`
+	CreateShare(ctx context.Context, userID int64, req *model.CreateShareRequest) (*model.Share, error)
 }
 
 type shareService struct {
@@ -199,7 +189,7 @@ func (s *shareService) GetMetadata(ctx context.Context, id int64) (*model.ShareM
 	}, nil
 }
 
-func (s *shareService) CreateShare(ctx context.Context, userID int64, req *CreateShareRequest) (*model.Share, error) {
+func (s *shareService) CreateShare(ctx context.Context, userID int64, req *model.CreateShareRequest) (*model.Share, error) {
 	// Tạo chuỗi hash unique cho link (ví dụ 8 bytes -> 16 ký tự hex)
 	linkHash, err := generateRandomHash(8)
 	if err != nil {

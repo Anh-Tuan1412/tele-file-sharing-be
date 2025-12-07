@@ -2,9 +2,10 @@ package http
 
 import (
 	"errors"
+	"file-sharing/internal/model"
+	"file-sharing/internal/share"
 	"net/http"
 	"strconv"
-	"file-sharing/internal/share"
 
 	"github.com/gin-gonic/gin"
 )
@@ -93,44 +94,44 @@ func (h *ShareHandler) HandleListShares(c *gin.Context) {
 
 // GET /v1/shares/:id/download
 func (h *ShareHandler) HandleDownload(c *gin.Context) {
-    // auth + parse id
-    user, ok := GetUserFromContext(c)
-    if !ok {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-        return
-    }
-    idStr := c.Param("id")
-    shareID, err := strconv.ParseInt(idStr, 10, 64)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "invalid share id"})
-        return
-    }
+	// auth + parse id
+	user, ok := GetUserFromContext(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	idStr := c.Param("id")
+	shareID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid share id"})
+		return
+	}
 
-    // tạo presigned url qua service (service sẽ Verify & CheckAndIncrement)
-    const expirySec = 120
-    url, err := h.service.CreatePresignedURL(c.Request.Context(), shareID, user.ID, expirySec)
-    if err != nil {
-        if errors.Is(err, share.ErrShareNotFoundOrAccessDenied) {
-            c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-            return
-        }
-        if errors.Is(err, share.ErrMaxDownloadsExceeded) {
-            c.JSON(http.StatusTooManyRequests, gin.H{"error": "download limit reached"})
-            return
-        }
-        if errors.Is(err, share.ErrShareRevokedOrExpired) {
-            c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
-            return
-        }
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create presigned url"})
-        return
-    }
+	// tạo presigned url qua service (service sẽ Verify & CheckAndIncrement)
+	const expirySec = 120
+	url, err := h.service.CreatePresignedURL(c.Request.Context(), shareID, user.ID, expirySec)
+	if err != nil {
+		if errors.Is(err, share.ErrShareNotFoundOrAccessDenied) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, share.ErrMaxDownloadsExceeded) {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "download limit reached"})
+			return
+		}
+		if errors.Is(err, share.ErrShareRevokedOrExpired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create presigned url"})
+		return
+	}
 
-    // Return link
-    c.JSON(http.StatusOK, gin.H{
-        "url":        url,
-        "expires_in": expirySec,
-    })
+	// Return link
+	c.JSON(http.StatusOK, gin.H{
+		"url":        url,
+		"expires_in": expirySec,
+	})
 }
 
 // GET /v1/shares/:id
@@ -162,31 +163,31 @@ func (h *ShareHandler) HandleGetShareMetadata(c *gin.Context) {
 	c.JSON(http.StatusOK, data)
 }
 
-// Khởi tạo 1 chia sẻ mới 
+// Khởi tạo 1 chia sẻ mới
 // POST v1/shares
 func (h *ShareHandler) HandleCreateShare(c *gin.Context) {
 	user, exists := GetUserFromContext(c)
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error" : "Unauthorized"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 
-	var req share.CreateShareRequest
+	var req model.CreateShareRequest
 
-	if err := c.ShouldBindJSON(&req); err != nil {    
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid body: " + err.Error()}) 
-        return
-    }
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid body: " + err.Error()})
+		return
+	}
 
-	// validation 
+	// validation
 	if req.FileID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error" : "file_id is required"})
-		return 
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file_id is required"})
+		return
 	}
 
 	createdShare, err := h.service.CreateShare(c.Request.Context(), user.ID, &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error" : "[debug] Failed to create share"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "[debug] Failed to create share"})
 	}
 
 	c.JSON(http.StatusCreated, createdShare)

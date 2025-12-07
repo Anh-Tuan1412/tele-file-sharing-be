@@ -39,13 +39,13 @@ func NewShareService(repo storage.ShareRepository) Service {
 	}
 }
 
-// Hàm sinh  chuỗi hash ngẫu nhiên 
+// Hàm sinh  chuỗi hash ngẫu nhiên
 func generateRandomHash(length int) (string, error) {
-    bytes := make([]byte, length)
-    if _, err := rand.Read(bytes); err != nil {
-        return "", err
-    }
-    return hex.EncodeToString(bytes), nil
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }
 
 func (s *shareService) RevokeShare(ctx context.Context, shareID int64, userID int64) error {
@@ -142,7 +142,6 @@ func (s *shareService) CreatePresignedURL(ctx context.Context, shareID int64, re
 	if err != nil {
 		return "", err
 	}
-
 	// presign via repo (MinIO)
 	url, err := s.repo.PresignObject(ctx, objectKey, expirySeconds)
 	if err != nil {
@@ -153,8 +152,6 @@ func (s *shareService) CreatePresignedURL(ctx context.Context, shareID int64, re
 
 var (
 	// trả về khi share không tồn tại hoặc không được phép truy cập
-var (
-	// trả về khi share không tồn tại hoặc không được phép truy cập
 	ErrShareNotFoundOrAccessDenied = storage.ErrShareNotFoundOrAccessDenied
 	// trả về khi share đã bị revoke hoặc đã hết hạn
 	ErrShareRevokedOrExpired = errors.New("share revoked or expired")
@@ -163,6 +160,8 @@ var (
 )
 
 func (s *shareService) GetMetadata(ctx context.Context, id int64) (*model.ShareMetadataResponseDTO, error) {
+	md, err := s.repo.GetShareMetadata(ctx, id)
+	if err != nil {
 		return nil, err
 	}
 
@@ -184,7 +183,6 @@ func (s *shareService) GetMetadata(ctx context.Context, id int64) (*model.ShareM
 			ID:         md.User.ID,
 			Username:   md.User.Username,
 			TelegramID: md.User.TelegramID,
-		},
 		},
 	}, nil
 }

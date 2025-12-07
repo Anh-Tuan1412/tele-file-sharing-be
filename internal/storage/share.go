@@ -5,8 +5,9 @@ import (
 	"errors"
 	"file-sharing/internal/model"
 
-	"github.com/jmoiron/sqlx"
 	"log"
+
+	"github.com/jmoiron/sqlx"
 )
 
 var ErrShareNotFoundOrAccessDenied = errors.New("share not found or access denied")
@@ -274,7 +275,6 @@ func (r *postgresShareRepository) PresignObject(ctx context.Context, objectKey s
 		return "", errors.New("object storage not configured")
 	}
 	return r.minio.PresignObject(ctx, objectKey, expirySeconds)
->>>>>>> thuanle/dev
 }
 
 func (r *postgresShareRepository) GetShareMetadata(ctx context.Context, id int64) (*model.ShareMetadata, error) {
@@ -293,17 +293,17 @@ func (r *postgresShareRepository) GetShareMetadata(ctx context.Context, id int64
 
 	var sh model.Share
 	var f model.FileWithOwner
-var ErrMaxDownloadsExceeded = errors.New("max downloads exceeded")
+	var u model.User
 
-// PresignObject tạo presigned URL cho objectKey, expirySeconds
-func (r *postgresShareRepository) PresignObject(ctx context.Context, objectKey string, expirySeconds int) (string, error) {
-	if r.minio == nil {
-		return "", errors.New("object storage not configured")
+	err := row.Scan(
+		&sh.ID, &sh.FileID, &sh.OwnerUserID, &sh.Hash, &sh.RequirePassword, &sh.Revoked, &sh.ExpiresAt, &sh.CreatedAt,
+		&f.ID, &f.OwnerUserID, &f.ObjectKey, &f.Filename, &f.Size, &f.Mime, &f.Status, &f.CreatedAt, &f.UpdatedAt,
+		&u.ID, &u.Username, &u.TelegramID, &u.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
 	}
-	return r.minio.PresignObject(ctx, objectKey, expirySeconds)
-}
 
-func (r *postgresShareRepository) GetShareMetadata(ctx context.Context, id int64) (*model.ShareMetadata, error) {
 	return &model.ShareMetadata{
 		Share: &sh,
 		File:  &f,

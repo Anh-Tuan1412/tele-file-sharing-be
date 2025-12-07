@@ -37,6 +37,7 @@ func (h *authorizePasswordHandler) HandleAuthorizePassword(c *gin.Context) {
 	// Gọi Service để xác thực mật khẩu
 	token, err := h.aService.AuthorizeSharePasswordAndIssueToken(c.Request.Context(), id, req.Password)
 	if err != nil {
+		println(err)
 		if errors.Is(err, files.InvalidPasswordError()) {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
 			return

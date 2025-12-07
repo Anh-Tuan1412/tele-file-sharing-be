@@ -1,0 +1,157 @@
+@startuml Telegram Bot State Diagram
+
+title Sơ đồ trạng thái Bot Telegram chia sẻ file
+
+[*] --> Idle : Bot khởi động
+
+state Idle {
+  Idle : Chờ lệnh từ người dùng
+  Idle : Các lệnh khả dụng: /start, /upload, /myfiles, /share, /myshares, /revoke
+}
+
+Idle --> UserRegistration : lệnh /start
+Idle --> UploadFlow : lệnh /upload  
+Idle --> ListFiles : lệnh /myfiles
+Idle --> ShareFlow : lệnh /share
+Idle --> ListShares : lệnh /myshares
+Idle --> RevokeFlow : lệnh /revoke
+
+state UserRegistration {
+  UserRegistration : Xác thực người dùng với Telegram ID
+  UserRegistration : Gọi POST /api/me
+  UserRegistration : Lưu trữ thông tin người dùng
+}
+
+state UploadFlow {
+  UploadInitiated : Gọi POST /v1/files
+  WaitingForFile : Chờ người dùng gửi file
+  FileReceived : Nhận được file từ người dùng
+  ProcessingUpload : Đang xử lý tải file lên
+  UploadComplete : Gọi POST /v1/files/:id/complete
+  
+  UploadInitiated --> WaitingForFile : Tạo phiên tải lên
+  WaitingForFile --> FileReceived : Người dùng gửi file
+  WaitingForFile --> Idle : hết thời gian hoặc hủy
+  FileReceived --> ProcessingUpload : Bắt đầu tải lên storage
+  ProcessingUpload --> UploadComplete : Tải lên thành công
+  ProcessingUpload --> UploadError : Tải lên thất bại
+  UploadComplete --> Idle : Hiển thị thông báo thành công
+}
+
+state UploadError {
+  UploadError : Hiển thị thông báo lỗi
+  UploadError : Gọi POST /v1/files/:id/report-complete với trạng thái lỗi
+}
+
+state ListFiles {
+  ListFiles : Gọi GET /v1/files
+  ListFiles : Hiển thị danh sách file với bàn phím inline
+  ListFiles : Tùy chọn: Chia sẻ, Xóa, Xem chi tiết
+}
+
+state ShareFlow {
+  SelectFile : Hiển thị danh sách file để chọn
+  WaitPasswordInput : Nhập mật khẩu (tùy chọn)
+  WaitExpiryInput : Nhập thời gian hết hạn (tùy chọn)
+  WaitRecipientsInput : Nhập danh sách người nhận (tùy chọn)
+  CreateShare : Gọi POST /v1/shares
+  ShareCreated : Hiển thị link chia sẻ và cài đặt
+  
+  SelectFile --> WaitPasswordInput : Đã chọn file
+  SelectFile --> Idle : Hủy hoặc quay lại
+  WaitPasswordInput --> WaitExpiryInput : Đã nhập mật khẩu hoặc bỏ qua
+  WaitPasswordInput --> SelectFile : Quay lại
+  WaitExpiryInput --> WaitRecipientsInput : Đã đặt thời hạn hoặc bỏ qua
+  WaitExpiryInput --> WaitPasswordInput : Quay lại
+  WaitRecipientsInput --> CreateShare : Đã đặt người nhận hoặc bỏ qua
+  WaitRecipientsInput --> WaitExpiryInput : Quay lại
+  CreateShare --> ShareCreated : Tạo chia sẻ thành công
+  CreateShare --> ShareError : Tạo chia sẻ thất bại
+  ShareCreated --> Idle : Hoàn tất
+}
+
+state ShareError {
+  ShareError : Hiển thị thông báo lỗi
+}
+
+state ListShares {
+  ListShares : Gọi GET /v1/shares
+  ListShares : Hiển thị danh sách chia sẻ đang hoạt động
+  ListShares : Tùy chọn: Xem, Thu hồi, Sao chép link
+}
+
+state RevokeFlow {
+  SelectShareToRevoke : Hiển thị danh sách chia sẻ để thu hồi
+  ConfirmRevoke : Yêu cầu xác nhận
+  ExecuteRevoke : Gọi POST /v1/shares/:id/revoke
+  RevokeComplete : Hiển thị thông báo thành công
+  
+  SelectShareToRevoke --> ConfirmRevoke : Đã chọn chia sẻ
+  SelectShareToRevoke --> Idle : Hủy hoặc quay lại
+  ConfirmRevoke --> ExecuteRevoke : Đã xác nhận
+  ConfirmRevoke --> SelectShareToRevoke : Hủy
+  ExecuteRevoke --> RevokeComplete : Thu hồi thành công
+  ExecuteRevoke --> RevokeError : Thu hồi thất bại
+  RevokeComplete --> Idle : Hoàn tất
+}
+
+state RevokeError {
+  RevokeError : Hiển thị thông báo lỗi
+}
+
+' Luồng người nhận (người dùng bên ngoài truy cập file chia sẻ)
+state RecipientFlow {
+  AccessShareLink : Người dùng nhấp vào link chia sẻ
+  CheckShareAccess : Gọi GET /v1/shares/:id
+  RequirePassword : Chia sẻ được bảo vệ bằng mật khẩu
+  WaitRecipientPassword : Chờ nhập mật khẩu
+  AuthorizeAccess : Gọi POST /v1/shares/:id/authorize
+  DownloadFile : Gọi GET /v1/shares/:id/download
+  
+  AccessShareLink --> CheckShareAccess : Đã nhấp link
+  CheckShareAccess --> RequirePassword : Yêu cầu mật khẩu
+  CheckShareAccess --> DownloadFile : Không cần mật khẩu
+  RequirePassword --> WaitRecipientPassword : Hiển thị yêu cầu nhập mật khẩu
+  WaitRecipientPassword --> AuthorizeAccess : Đã nhập mật khẩu
+  WaitRecipientPassword --> [*] : Hủy hoặc hết thời gian
+  AuthorizeAccess --> DownloadFile : Mật khẩu đúng
+  AuthorizeAccess --> RequirePassword : Mật khẩu sai
+  DownloadFile --> [*] : Đã tải file hoặc hoàn tất
+}
+
+' Xử lý chuyển trạng thái lỗi
+UploadError --> Idle : Quay về menu chính
+ShareError --> Idle : Quay về menu chính  
+RevokeError --> Idle : Quay về menu chính
+
+' Quay về trạng thái chờ từ các trạng thái khác
+UserRegistration --> Idle : Hoàn tất đăng ký
+ListFiles --> Idle : Quay về menu chính
+ListShares --> Idle : Quay về menu chính
+
+' Chuyển trạng thái chung từ mọi trạng thái
+Idle --> Idle : Lệnh không rõ (hiển thị trợ giúp)
+
+note right of RecipientFlow
+  Luồng này xử lý người dùng bên ngoài
+  truy cập file chia sẻ thông qua
+  link chia sẻ, không thông qua bot
+end note
+
+note right of UploadFlow
+  Quá trình tải file bao gồm:
+  1. Tạo phiên tải lên
+  2. Nhận file từ người dùng
+  3. Tải lên cloud storage
+  4. Báo cáo trạng thái hoàn thành
+end note
+
+note right of ShareFlow
+  Tạo chia sẻ cho phép:
+  - Bảo vệ mật khẩu (tùy chọn)
+  - Thời gian hết hạn (tùy chọn)
+  - Danh sách người nhận (tùy chọn)
+  - Tạo link có thể chia sẻ
+end note
+
+@enduml

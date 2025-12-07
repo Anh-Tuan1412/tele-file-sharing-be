@@ -17,13 +17,14 @@ RUN go mod download
 COPY . .
 
 # Build the application with memory optimization
-RUN CGO_ENABLED=0 GOOS=linux go build -buildvcs=false -ldflags="-s -w" -o main ./cmd/api
+RUN --mount=type=secret,id=DATABASE_URL \
+    CGO_ENABLED=0 GOOS=linux go build -buildvcs=false -ldflags="-s -w" -o main ./cmd/api
 
 # Final stage - minimal image
 FROM alpine:latest
 
 # Install ca-certificates for HTTPS requests
-RUN apk --no-cache add ca-certificates tzdata
+RUN apk --no-cache add ca-certificates tzdata postgresql-client
 
 # Create non-root user
 RUN addgroup -g 1001 -S appgroup && \
@@ -39,6 +40,7 @@ COPY --from=builder /app/main .
 COPY --from=builder /app/env ./env
 COPY --from=builder /app/api ./api
 COPY --from=builder /app/migrations ./migrations
+COPY --from=builder /app/scripts ./scripts
 
 # Create uploads directory and set permissions
 RUN mkdir -p /app/uploads && \

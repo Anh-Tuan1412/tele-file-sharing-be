@@ -71,7 +71,7 @@ paths:
                   example: "image/jpeg"
                 created_at:
                   type: string
-                  formant: date-time
+                  format: date-time
                   example: "2025-11-09T14:00:00Z"
                 updated_at:
                   type: string
@@ -325,7 +325,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-
     post:
       summary: Tạo 1 chia sẻ mới cho file
       description: Tạo một link chia sẻ mới cho một file.
@@ -333,15 +332,15 @@ paths:
         Backend sẽ tự động tạo một 'hash' duy nhất cho link.
       tags:
         - Shares
-      paramethers:
+      parameters:
         - $ref: "#/components/parameters/TelegramUserId"
         - $ref: "#/components/parameters/TelegramUsername"
       requestBody:
         required: true
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/CreateShareRequest"
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateShareRequest"
 
       responses:
         "201":
@@ -369,7 +368,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /api/v1/shares/{id}/revoke:
+  /v1/shares/{id}/revoke:
     post:
       summary: Thu hồi link chia sẻ
       description: Đánh dấu một link chia sẻ là đã thu hồi.
@@ -399,6 +398,146 @@ paths:
                 $ref: "#/components/schemas/Error"
         "404":
           description: Không tìm thấy hoặc không có quyền
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/shares/{id}/download:
+    get:
+      summary: Tải file từ link chia sẻ
+      description: |
+        Xác minh share (không bị revoked, chưa hết hạn và đã authorize nếu yêu cầu mật khẩu),
+        sau đó trả file nhị phân cho client (Content-Disposition sẽ là attachment).
+      tags:
+        - Shares
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID của share
+          schema:
+            type: integer
+            format: int64
+        - $ref: "#/components/parameters/TelegramUserId"
+        - $ref: "#/components/parameters/TelegramUsername"
+      responses:
+        "200":
+          description: File được trả về dưới dạng binary (tham số Content-Type dựa trên file)
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Bad Request - share ID không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized - thiếu hoặc sai Telegram headers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - share đã bị revoke hoặc hết hạn, hoặc chưa được authorize
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not Found - không tìm thấy share hoặc file trên disk
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/shares/{id}/authorize:
+    post:
+      summary: Xác thực mật khẩu cho link chia sẻ
+      description: |
+        Cho phép người dùng xác thực mật khẩu để truy cập link chia sẻ được bảo vệ.
+        Nếu mật khẩu đúng, hệ thống sẽ trả về token truy cập tạm thời.
+      tags:
+        - Authorization
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID của share
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - password
+              properties:
+                password:
+                  type: string
+                  description: Mật khẩu để xác thực
+                  example: "my-secret-pass-123"
+      responses:
+        "200":
+          description: Thành công – trả về token truy cập tạm thời
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: Token truy cập tạm thời
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        "400":
+          description: Dữ liệu đầu vào không hợp lệ hoặc mật khẩu sai
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Lỗi hệ thống
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/shares/{id}:
+    get:
+      summary: Lấy metadata của share
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Metadata của share
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShareMetadataResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found
           content:
             application/json:
               schema:
@@ -706,7 +845,7 @@ components:
           type: string
           format: password
           description: Mật khẩu tùy chọn cho link share.
-          example: "my-secret-pass-123"
+          example: "matkhau123"
         expires_at:
           type: string
           format: date-time
@@ -728,75 +867,6 @@ components:
         status:
           type: string
           example: "revoked"
-  /v1/shares/:id/authorize:
-    post:
-      summary: Xác thực mật khẩu cho link chia sẻ
-      description: |
-        Cho phép người dùng xác thực mật khẩu để truy cập link chia sẻ được bảo vệ.
-        Nếu mật khẩu đúng, hệ thống sẽ trả về token truy cập tạm thời.
-      tags:
-        - Authorization
-      parameters:
-        - name: id
-          in: URL
-          required: true
-          description: ID của link chia sẻ
-          schema:
-            type: integer
-            format: int64
-        - name: password
-          in: URL
-          required: true
-          description: Mật khẩu để xác thực
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Thành công – trả về token truy cập tạm thời
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  access_token:
-                    type: string
-                    description: Token truy cập tạm thời
-                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-        "400":
-          description: Dữ liệu đầu vào không hợp lệ hoặc mật khẩu sai
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          description: Lỗi hệ thống
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-  /v1/shares/{id}:
-    get:
-      summary: Lấy metadata của share
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Metadata của share
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ShareMetadataResponse"
-        '401':
-          description: Unauthorized
-        '404':
-          description: Not found
-
-components:
-  schemas:
     FileMetadata:
       type: object
       properties:
@@ -904,5 +974,3 @@ components:
           type: integer
           description: Vị trí bắt đầu
           example: 0
-
-

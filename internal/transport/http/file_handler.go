@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
@@ -10,9 +11,33 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"file-sharing/internal/model"
+
+	"github.com/gin-gonic/gin"
 )
+
+// Khai báo các Interface cần dùng (để tránh dependency vòng)
+// Lấy từ storage/file.go
+type FileRepository interface {
+	CreateFile(ctx context.Context, file model.File) (*model.File, error)
+}
+
+// Lấy từ storage/minio_repo.go
+type MinioService interface {
+	CreatePresignedPutURL(ctx context.Context, objectKey string, contentType string) (string, error)
+}
+
+type FileHandler struct {
+	fileRepo FileRepository
+	minioSvc MinioService
+}
+
+func NewFileHandler(fileRepo FileRepository, minioSvc MinioService) *FileHandler {
+	return &FileHandler{
+		fileRepo: fileRepo,
+		minioSvc: minioSvc,
+	}
+}
 
 type FileInitRequest struct {
 	Filename  string    `json:"filename" binding:"required"`
@@ -42,68 +67,65 @@ func generateRandomToken() string {
 }
 
 // POST /v1/files
-func InitFileUploadHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		telegramID := c.GetHeader("X-Telegram-User-Id")
-		username := c.GetHeader("X-Telegram-Username")
-
-		if telegramID == "" || username == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "missing Telegram headers"})
-			return
-		}
-
-		var req FileInitRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		// Step 1: find or create user
-		var userID int64
-		err := db.QueryRow(`SELECT id FROM users WHERE telegram_user_id = $1`, telegramID).Scan(&userID)
-		if err == sql.ErrNoRows {
-			err = db.QueryRow(`
-				INSERT INTO users (telegram_user_id, username)
-				VALUES ($1, $2)
-				RETURNING id
-			`, telegramID, username).Scan(&userID)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
-				return
-			}
-		} else if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
-			return
-		}
-
-		// Step 2: create file record
-		objectKey := fmt.Sprintf("uploads/%d/%d_%s", userID, time.Now().Unix(), req.Filename)
-		uploadToken := generateRandomToken() // replaced uuid.New().String()
-
-		var fileID int64
-		err = db.QueryRow(`
-			INSERT INTO files (owner_user_id, object_key, filename, size, mime, status, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7)
-			RETURNING id
-		`, userID, objectKey, req.Filename, req.Size, req.MimeType, req.CreatedAt, req.UpdatedAt).Scan(&fileID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create file record"})
-			return
-		}
-
-		// Step 3: (optional) generate presigned URL from S3 / MinIO
-		uploadURL := fmt.Sprintf("https://minio.local/presigned/%s", uploadToken)
-
-		resp := FileInitResponse{
-			FileID:    fileID,
-			ObjectKey: objectKey,
-			UploadURL: uploadURL,
-			Status:    "pending",
-			CreatedAt: req.CreatedAt,
-			UpdatedAt: req.UpdatedAt,
-		}
-		c.JSON(http.StatusOK, resp)
+// HandleFileInit là handler cho POST /v1/files: Khởi tạo upload
+func (h *FileHandler) HandleFileInit(c *gin.Context) {
+	// 1. Xác thực và lấy User từ Context
+	user, exists := GetUserFromContext(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
 	}
+
+	// 2. Bind JSON request
+	var req FileInitRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload", "details": err.Error()})
+		return
+	}
+
+	// 3. Chuẩn bị metadata file
+	objectKey := generateRandomToken() // Tạo một khóa đối tượng ngẫu nhiên
+
+	newFile := model.File{
+		OwnerUserID: user.ID,
+		Filename:    req.Filename,
+		ObjectKey:   objectKey,
+		Size:        req.Size,
+		Mime:        req.MimeType,
+		Status:      model.FileStatusPending, // Đặt trạng thái ban đầu là 'pending'
+		// Không cần truyền CreatedAt/UpdatedAt vì DB sẽ tự động tạo/update
+	}
+
+	// 4. Lưu metadata vào DB (repository)
+	createdFile, err := h.fileRepo.CreateFile(c.Request.Context(), newFile)
+	if err != nil {
+		log.Printf("DB Error: Failed to create file record: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initialize file record"})
+		return
+	}
+
+	// 5. Tạo Presigned URL (dùng MinIO Service)
+	// URL sẽ chỉ cho phép client thực hiện 1 PUT duy nhất
+	uploadURL, err := h.minioSvc.CreatePresignedPutURL(c.Request.Context(), objectKey, req.MimeType)
+	if err != nil {
+		log.Printf("MinIO Error: Failed to generate upload URL: %v", err)
+		// Nếu MinIO lỗi, cân nhắc xóa bản ghi DB để tránh file rác (tùy chọn)
+		// Hiện tại ta chỉ trả về lỗi
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate upload URL"})
+		return
+	}
+
+	// 6. Trả về response thành công
+	resp := FileInitResponse{
+		FileID:    createdFile.ID,
+		ObjectKey: createdFile.ObjectKey,
+		UploadURL: uploadURL, // URL để client upload trực tiếp
+		Status:    createdFile.Status,
+		CreatedAt: createdFile.CreatedAt,
+		UpdatedAt: createdFile.UpdatedAt,
+	}
+
+	c.JSON(http.StatusOK, resp)
 }
 
 type FileResponse struct {
@@ -281,9 +303,9 @@ func ReportUploadCompleteHandler(db *sql.DB) gin.HandlerFunc {
 			)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 			RETURNING id
-		`, fileID, userID, req.Status, req.ReportType, req.Message, req.ErrorCode, 
-		   req.ErrorMessage, req.FileChecksum, req.FileSizeActual, req.UploadDurationMs,
-		   req.BandwidthKbps, now, now).Scan(&reportID)
+		`, fileID, userID, req.Status, req.ReportType, req.Message, req.ErrorCode,
+			req.ErrorMessage, req.FileChecksum, req.FileSizeActual, req.UploadDurationMs,
+			req.BandwidthKbps, now, now).Scan(&reportID)
 		if err != nil {
 			log.Printf("Failed to create upload report: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create report"})

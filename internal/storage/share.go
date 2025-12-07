@@ -3,12 +3,13 @@ package storage
 import (
 	"context"
 	"errors"
-	"log"
-
 	"file-sharing/internal/model"
 
 	"github.com/jmoiron/sqlx"
+	"log"
 )
+
+var ErrShareNotFoundOrAccessDenied = errors.New("share not found or access denied")
 
 type ShareRepository interface {
 	// RevokeShare cập nhật trạng thái revoked = true
@@ -30,23 +31,36 @@ type ShareRepository interface {
 	// Lấy hash mật khẩu của share
 	GetPasswordHash(ctx context.Context, shareID int64) (string, error)
 
+	// Lấy đường dẫn file liên kết với share nếu share đang active
+	GetActiveFilePathByShareID(ctx context.Context, shareID int64) (string, string, error)
+
+	// Tăng số lượt tải xuống của share, trả về lỗi nếu đã đạt max_downloads
+	CheckAndIncrementDownload(ctx context.Context, shareID int64) error
+
+	// PresignObject tạo presigned URL cho objectKey, expirySeconds
+	PresignObject(ctx context.Context, objectKey string, expirySeconds int) (string, error)
+
 	// GetShareMetadata lấy metadata đầy đủ của share
 	GetShareMetadata(ctx context.Context, id int64) (*model.ShareMetadata, error)
+
+	// Tạo 1 chia sẻ mới
+	CreateShare(ctx context.Context, share *model.Share) (*model.Share, error)
 }
 
 type postgresShareRepository struct {
-	db *sqlx.DB
+	db    *sqlx.DB
+	minio *MinioRepo
 }
 
-func NewShareRepository(db *sqlx.DB) ShareRepository {
-	return &postgresShareRepository{db: db}
+func NewShareRepository(db *sqlx.DB, minio *MinioRepo) ShareRepository {
+	return &postgresShareRepository{db: db, minio: minio}
 }
 
 func (r *postgresShareRepository) RevokeShare(ctx context.Context, shareID int64, ownerUserID int64) error {
 	const query = `
 		UPDATE shares
 		SET revoked = true, updated_at = NOW()
-		WHERE id = $1 AND owner_user_id = $2 
+		WHERE id = $1 AND owner_user_id = $2 AND revoked = false
 	`
 
 	result, err := r.db.ExecContext(ctx, query, shareID, ownerUserID)
@@ -60,11 +74,22 @@ func (r *postgresShareRepository) RevokeShare(ctx context.Context, shareID int64
 		return err
 	}
 
-	if rows == 0 {
-		return errors.New("share not found or access denied")
+	if rows > 0 {
+		return nil
 	}
 
-	return nil
+	const checkQuery = `SELECT EXISTS(SELECT 1 FROM shares WHERE id = $1 AND owner_user_id = $2)`
+	var exists bool
+	err = r.db.GetContext(ctx, &exists, checkQuery, shareID, ownerUserID)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		return nil
+	}
+
+	return ErrShareNotFoundOrAccessDenied
 }
 
 func (r *postgresShareRepository) GetShareByID(ctx context.Context, shareID int64) (*model.Share, error) {
@@ -77,11 +102,13 @@ func (r *postgresShareRepository) GetShareByID(ctx context.Context, shareID int6
 // Các hàm truy xuất DB liên quan đến authorize password
 func (r *postgresShareRepository) GetPasswordHash(ctx context.Context, shareID int64) (string, error) {
 	const query = `SELECT hash_password FROM shares WHERE id = $1`
+	// var passwordHash string
 	var passwordHash string
 	err := r.db.GetContext(ctx, &passwordHash, query, shareID)
 	if err != nil {
 		return "", err
 	}
+
 	return passwordHash, nil
 }
 
@@ -185,31 +212,69 @@ func (r *postgresShareRepository) CountSharesByOwnerUserID(ctx context.Context, 
 	return count, nil
 }
 
-// Deprecated: use ListSharesWithFileByOwnerUserID instead
-func (r *postgresShareRepository) listSharesLegacy(ctx context.Context, ownerUserID int64, limit, offset int) ([]model.Share, error) {
-	const query = `
-		SELECT
-			id,
-			file_id,
-			owner_user_id,
-			hash,
-			require_password,
-			revoked,
-			expires_at,
-			created_at,
-			updated_at
-		FROM shares
-		WHERE owner_user_id = $1
-		ORDER BY created_at DESC
-		LIMIT $2 OFFSET $3
+// GetActiveFilePathByShareID trả về path và filename
+func (r *postgresShareRepository) GetActiveFilePathByShareID(ctx context.Context, shareID int64) (string, string, error) {
+	query := `
+    SELECT f.object_key, f.filename
+    FROM shares s
+    JOIN files f ON s.file_id = f.id
+    WHERE s.id = $1
+		AND NOT s.revoked
+		AND (s.expires_at IS NULL OR s.expires_at > now())
+    LIMIT 1
 	`
-	var shares []model.Share
-	err := r.db.SelectContext(ctx, &shares, query, ownerUserID, limit, offset)
-	if err != nil {
-		log.Printf("Failed to list shares legacy for user ID %d: %v", ownerUserID, err)
-		return nil, err
+
+	var res struct {
+		Path     string `db:"object_key"`
+		Filename string `db:"filename"`
 	}
-	return shares, nil
+
+	err := r.db.GetContext(ctx, &res, query, shareID)
+	if err != nil {
+		return "", "", err
+	}
+
+	return res.Path, res.Filename, nil
+}
+
+// CheckAndIncrementDownload tăng số lượt tải xuống của share, trả về lỗi nếu đã đạt max_downloads
+// HIỆN LÀ NO-OP
+func (r *postgresShareRepository) CheckAndIncrementDownload(ctx context.Context, shareID int64) error {
+
+	// CheckAndIncrementDownload tăng số lượt tải xuống của share, trả về lỗi nếu đã vượt max_downloads.
+	// Đang mặc định không làm gì.
+	// Nếu muốn bật giới hạn, cần thêm trường max_downloads và download_count vào DB.
+
+	/*
+			const q = `
+		        UPDATE shares
+		        SET download_count = download_count + 1
+		        WHERE id = $1
+		        AND (max_downloads IS NULL OR download_count < max_downloads)
+		        RETURNING download_count
+		    `
+			var newCount int
+		    err := r.db.GetContext(ctx, &newCount, q, shareID)
+		    if err != nil {
+		        if err == sql.ErrNoRows {
+		            return ErrMaxDownloadsExceeded
+		        }
+		        return err
+		    }
+		    _ = newCount
+	*/
+	return nil
+}
+
+var ErrMaxDownloadsExceeded = errors.New("max downloads exceeded")
+
+// PresignObject tạo presigned URL cho objectKey, expirySeconds
+func (r *postgresShareRepository) PresignObject(ctx context.Context, objectKey string, expirySeconds int) (string, error) {
+	if r.minio == nil {
+		return "", errors.New("object storage not configured")
+	}
+	return r.minio.PresignObject(ctx, objectKey, expirySeconds)
+>>>>>>> thuanle/dev
 }
 
 func (r *postgresShareRepository) GetShareMetadata(ctx context.Context, id int64) (*model.ShareMetadata, error) {
@@ -228,20 +293,57 @@ func (r *postgresShareRepository) GetShareMetadata(ctx context.Context, id int64
 
 	var sh model.Share
 	var f model.FileWithOwner
-	var u model.User
+var ErrMaxDownloadsExceeded = errors.New("max downloads exceeded")
 
-	err := row.Scan(
-		&sh.ID, &sh.FileID, &sh.OwnerUserID, &sh.Hash, &sh.RequirePassword, &sh.Revoked, &sh.ExpiresAt, &sh.CreatedAt,
-		&f.ID, &f.OwnerUserID, &f.ObjectKey, &f.Filename, &f.Size, &f.Mime, &f.Status, &f.CreatedAt, &f.UpdatedAt,
-		&u.ID, &u.Username, &u.TelegramID, &u.CreatedAt,
-	)
-	if err != nil {
-		return nil, err
+// PresignObject tạo presigned URL cho objectKey, expirySeconds
+func (r *postgresShareRepository) PresignObject(ctx context.Context, objectKey string, expirySeconds int) (string, error) {
+	if r.minio == nil {
+		return "", errors.New("object storage not configured")
 	}
+	return r.minio.PresignObject(ctx, objectKey, expirySeconds)
+}
 
+func (r *postgresShareRepository) GetShareMetadata(ctx context.Context, id int64) (*model.ShareMetadata, error) {
 	return &model.ShareMetadata{
 		Share: &sh,
 		File:  &f,
 		User:  &u,
 	}, nil
+}
+
+// Tạo 1 chia sẻ mới
+// đc gợi bởi hàm CreateShare bên service, đã truyền vào 1 DTO share
+// có chứa hash password
+func (r *postgresShareRepository) CreateShare(ctx context.Context, s *model.Share) (*model.Share, error) {
+	const query = `
+		INSERT INTO shares (
+			file_id, 
+            owner_user_id, 
+            hash, 
+            require_password, 
+            hash_password, 
+            expires_at,
+            created_at,
+            updated_at
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+		RETURNING id, created_at, updated_at
+	`
+
+	err := r.db.QueryRowContext(
+		ctx, query,
+		s.FileID,
+		s.OwnerUserID,
+		s.Hash,
+		s.RequirePassword,
+		s.HashPassword, // mật khẩu đã được hash
+		s.ExpiresAt,
+	).Scan(&s.ID, &s.CreatedAt, &s.UpdatedAt)
+
+	if err != nil {
+		log.Printf("Failed to create share: %v", err)
+		return nil, err
+	}
+
+	return s, nil
 }

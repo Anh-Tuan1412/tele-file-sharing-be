@@ -1,18 +1,25 @@
-name: Deploy
+name: Fly Deploy
 
 on:
   push:
     branches:
-      - main
+      - dev
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    name: Deploy app
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency: deploy-group # Ensures only one deployment runs at a time
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # Thêm các bước triển khai của bạn ở đây
-      - name: Deploy to production
-        run: echo "Deploying..."
+      - name: Setup Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
 
+      - name: Deploy to Fly.io
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

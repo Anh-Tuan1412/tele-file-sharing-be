@@ -46,6 +46,12 @@ type ShareMetadataResponseDTO struct {
 	Owner     UserMinimalDTO  `json:"owner"`
 }
 
+type CreateShareRequest struct {
+	FileID    int64      `json:"file_id" binding:"required"`
+	Password  string     `json:"password"`
+	ExpiresAt *time.Time `json:"expires_at"`
+}
+
 // ShareListItemDTO đại diện cho một item trong danh sách shares của người dùng
 type ShareListItemDTO struct {
 	ID              int64      `json:"id"`
